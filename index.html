@@ -10,7 +10,7 @@
       --text: #f0f0f0;
       --accent: #00ffc3;
       --muted: #999;
-      --font: 'Segoe UI', sans-serif;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
     body {
       margin: 0;
@@ -89,7 +89,8 @@
     <p>
       <strong>moonlight-commit</strong> is a Git hook that blocks commits during work hours (default 9am–5pm Monday–Friday), helping you preserve your creative energy for personal projects. Inspired by California Labor Code §2870, it ensures your side projects stay yours.
     </p>
-    <div class="features">
+    <h2 id="features">Features</h2>
+    <div class="features" aria-labelledby="features">
       <div class="feature">
         <h3>🕒 Configurable Hours & Days</h3>
         <p>Set your own block window and days via <code>git config</code>.</p>
@@ -107,9 +108,23 @@
         <p>Use <code>[override]</code> in commit messages to bypass restrictions.</p>
       </div>
     </div>
-    <p style="margin-top:2rem;">
-      View the project on <a href="https://github.com/YOUR_USERNAME/moonlight-commit" target="_blank" rel="noopener noreferrer">GitHub</a>.
+    <p id="github-paragraph" style="margin-top:2rem;">
+      View the project on <a id="github-link" href="#" target="_blank" rel="noopener noreferrer">GitHub</a>.
     </p>
+    <script data-repo-owner="YOUR_USERNAME">
+      (function() {
+        var owner = document.currentScript.getAttribute('data-repo-owner');
+        if (!owner) {
+          var host = location.hostname;
+          if (host.endsWith('.github.io')) {
+            owner = host.replace('.github.io', '');
+          }
+        }
+        if (owner) {
+          document.getElementById('github-link').href = 'https://github.com/' + owner + '/moonlight-commit';
+        }
+      })();
+    </script>
   </main>
   <footer>
     &copy; 2025 moonlight-commit · <a href="https://moonlightcommit.com">moonlightcommit.com</a>
