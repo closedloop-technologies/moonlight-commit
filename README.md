@@ -20,7 +20,18 @@ Run the installer for global setup:
 ./install.sh
 ```
 
-This copies hooks to `~/.git-hooks` and sets `core.hooksPath` globally.
+This copies hooks to `~/.git-hooks` and sets `core.hooksPath` globally. If you already
+have a global hooks directory configured, the installer will prompt to back it up
+before overriding. To remove the hooks and restore the previous configuration, run
+`./install.sh --uninstall`.
+
+## Uninstall
+
+To remove moonlight-commit and restore your previous `core.hooksPath` value, run:
+
+```bash
+./install.sh --uninstall
+```
 
 ## Configuration
 
@@ -53,7 +64,7 @@ docker run --rm moonlight-commit-test
 
 ## Website
 
-A minimal static landing page is available at [moonlightcommit.com](https://moonlightcommit.com). The same HTML file (`index.html`) is included in this repo for GitHub Pages hosting.
+A minimal static landing page is available at [moonlightcommit.com](https://moonlightcommit.com). The same HTML file (`index.html`) is included in this repo for GitHub Pages hosting. The GitHub link on the page is populated by a small script. If you host the page on a custom domain, edit the `data-repo-owner` attribute in the script tag to point to your GitHub username so the link resolves correctly.
 
 ## License
 
