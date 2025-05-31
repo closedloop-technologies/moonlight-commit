@@ -1,0 +1,51 @@
+#!/bin/sh
+# moonlight-commit commit-msg hook enforcing override during block window with day filtering and whitelist
+
+# Load configuration with defaults
+BLOCK_START=$(git config --get moonlight-commit.blockStart || echo "9")
+BLOCK_END=$(git config --get moonlight-commit.blockEnd || echo "17")
+BLOCK_DAYS=$(git config --get moonlight-commit.blockDays || echo "1,2,3,4,5")
+WHITELIST_ORGS=$(git config --get moonlight-commit.whitelistOrgs || echo "")
+
+# Get current local hour and day of week
+CURRENT_HOUR=$(date +%H)
+CURRENT_HOUR=${CURRENT_HOUR#0}
+CURRENT_DAY=$(date +%u)
+
+# Get branch name and origin org
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
+REPO_ORG=$(echo "$ORIGIN_URL" | sed -E 's#.*[:/]{1,2}([^/]+)/.*#\1#')
+
+# Skip checks for hotfix or vacation branches
+echo "$BRANCH_NAME" | grep -qi "hotfix" && exit 0
+echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
+
+# Skip checks for whitelisted orgs
+for org in ${WHITELIST_ORGS//,/ }; do
+  if [ "$REPO_ORG" = "$org" ]; then exit 0; fi
+done
+
+# Check if current day is in block days
+DAY_ALLOWED=0
+IFS=',' read -r -a DAYS_ARRAY <<< "$BLOCK_DAYS"
+for d in "${DAYS_ARRAY[@]}"; do
+  if [ "$CURRENT_DAY" -eq "$d" ]; then
+    DAY_ALLOWED=1
+    break
+  fi
+done
+
+if [ "$DAY_ALLOWED" -eq 1 ]; then
+  # If within blocked hours, enforce [override] keyword
+  if [ "$CURRENT_HOUR" -ge "$BLOCK_START" ] && [ "$CURRENT_HOUR" -lt "$BLOCK_END" ]; then
+    COMMIT_MSG_FILE="$1"
+    if ! grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
+      FIRST_LINE=$(head -n1 "$COMMIT_MSG_FILE")
+      echo "❌ Commit message '$FIRST_LINE' blocked between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays without [override]." >&2
+      exit 1
+    fi
+  fi
+fi
+
+exit 0
