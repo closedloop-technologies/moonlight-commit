@@ -1,0 +1,58 @@
+#!/bin/sh
+# moonlight-commit pre-commit hook with configurable block window, day filtering, org whitelist, and vacation flag
+
+# Load configuration with defaults
+BLOCK_START=$(git config --get moonlight-commit.blockStart || echo "9")
+BLOCK_END=$(git config --get moonlight-commit.blockEnd || echo "17")
+BLOCK_DAYS=$(git config --get moonlight-commit.blockDays || echo "1,2,3,4,5") # Mon-Fri by default (1=Monday)
+WHITELIST_ORGS=$(git config --get moonlight-commit.whitelistOrgs || echo "")
+
+# Get current local hour (0-23) and day of week (1=Monday, 7=Sunday)
+CURRENT_HOUR=$(date +%H)
+CURRENT_HOUR=${CURRENT_HOUR#0}
+CURRENT_DAY=$(date +%u)
+
+# Get current branch name
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+# 1. Hotfix branch exception
+echo "$BRANCH_NAME" | grep -qi "hotfix" && exit 0
+
+# 2. Vacation flag branch exception
+echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
+
+# 3. Org whitelist exception (parse origin URL)
+ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
+REPO_ORG=$(echo "$ORIGIN_URL" | sed -E 's#.*[:/]{1,2}([^/]+)/.*#\1#')
+for org in ${WHITELIST_ORGS//,/ }; do
+  if [ "$REPO_ORG" = "$org" ]; then
+    exit 0
+  fi
+done
+
+# 4. Check if current day is in block days
+DAY_ALLOWED=0
+IFS=',' read -r -a DAYS_ARRAY <<< "$BLOCK_DAYS"
+for d in "${DAYS_ARRAY[@]}"; do
+  if [ "$CURRENT_DAY" -eq "$d" ]; then
+    DAY_ALLOWED=1
+    break
+  fi
+done
+
+if [ "$DAY_ALLOWED" -eq 1 ]; then
+  # 5. Time window check: block if CURRENT_HOUR in [BLOCK_START, BLOCK_END)
+  if [ "$CURRENT_HOUR" -ge "$BLOCK_START" ] && [ "$CURRENT_HOUR" -lt "$BLOCK_END" ]; then
+    # Attempt override via commit message (pre-commit only sees COMMIT_EDITMSG if using -m)
+    COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
+    if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
+      exit 0
+    fi
+    echo "❌ Commit blocked: Commits between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays are disallowed." >&2
+    echo "   Use [override], adjust timings with 'git config moonlight-commit.blockStart/blockEnd/blockDays', or whitelist your org." >&2
+    exit 1
+  fi
+fi
+
+# Otherwise allow commit
+exit 0
