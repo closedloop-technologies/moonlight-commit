@@ -1,6 +1,6 @@
 # moonlight-commit
 
-**Protect your right to hack after hours.**
+**Prevent accidental commits during work hours — even from coding agents.**
 
 `moonlight-commit` is a Git hook system that blocks commits during configurable working hours and days (default 9am–5pm Monday–Friday), with exceptions for hotfix and vacation branches, override commit message flags, and whitelisted GitHub organizations.
 
@@ -14,44 +14,45 @@
 
 ## Installation
 
-Run the installer for global setup:
+Install locally in any repository:
 
 ```bash
-./install.sh
+curl -s https://moonlight-commit.com/install.sh | bash
 ```
 
-This copies hooks to `~/.git-hooks` and sets `core.hooksPath` globally. If you already
-have a global hooks directory configured, the installer will prompt to back it up
-before overriding. To remove the hooks and restore the previous configuration, run
-`./install.sh --uninstall`.
+Run the installer with `--dry-run` to preview actions.
 
 ## Uninstall
 
-To remove moonlight-commit and restore your previous `core.hooksPath` value, run:
-
-```bash
-./install.sh --uninstall
-```
+To remove moonlight-commit delete `.git/hooks/pre-commit.moonlight` and the
+`pre-commit` symlink created by the installer.
 
 ## Configuration
 
-Customize timings, days, and org whitelist:
+Customize timings, days, and org whitelist via git config or environment vars:
 
 ```bash
 # Set block hours (inclusive start, exclusive end)
 git config moonlight-commit.blockStart 10
 git config moonlight-commit.blockEnd 16
+# Or use environment variables
+export MOONLIGHT_BLOCK_START=10
+export MOONLIGHT_BLOCK_END=16
 
 # Set block days (1=Monday, 7=Sunday)
 git config moonlight-commit.blockDays 1,2,3,4,5
+export MOONLIGHT_BLOCK_DAYS="1,2,3,4,5"
 
 # Whitelist GitHub orgs (comma-separated)
 git config moonlight-commit.whitelistOrgs your-org,another-org
+export MOONLIGHT_WHITELIST_ORGS="your-org,another-org"
 ```
 
 ## Branch Exceptions
 
 Branches containing `hotfix` or `vacation` bypass blocking.
+
+Use `[override]` in commit messages to force a commit during the block window.
 
 ## Testing
 
@@ -60,6 +61,12 @@ Automated tests run inside Docker with time and day simulation.
 ```bash
 docker build -t moonlight-commit-test tests
 docker run --rm moonlight-commit-test
+```
+
+Quick check in any repo:
+
+```bash
+.git/hooks/pre-commit --dry-run
 ```
 
 ## Website
@@ -73,3 +80,5 @@ MIT License
 ## Credits
 
 Built by indie devs, for indie devs. Inspired by late nights, side hustles, and the eternal right to moonlight.
+
+⭐ **Star this repo** if you find it useful — and [buy me a coffee](https://buymeacoffee.com/moonlight).

@@ -1,11 +1,21 @@
 #!/bin/sh
-# moonlight-commit pre-commit hook with configurable block window, day filtering, org whitelist, and vacation flag
+# moonlight-commit pre-commit hook with configurable block window, day filtering,
+# org whitelist, and vacation flag. Supports --dry-run for verbose testing.
 
-# Load configuration with defaults
-BLOCK_START=$(git config --get moonlight-commit.blockStart || echo "9")
-BLOCK_END=$(git config --get moonlight-commit.blockEnd || echo "17")
-BLOCK_DAYS=$(git config --get moonlight-commit.blockDays || echo "1,2,3,4,5") # Mon-Fri by default (1=Monday)
-WHITELIST_ORGS=$(git config --get moonlight-commit.whitelistOrgs || echo "")
+DRY_RUN=0
+if [ "${1:-}" = "--dry-run" ]; then
+  DRY_RUN=1
+fi
+
+# Load configuration with defaults. Environment variables take precedence over
+# git config so hooks can be tested without touching user config.
+BLOCK_START="${MOONLIGHT_BLOCK_START:-$(git config --get moonlight-commit.blockStart 2>/dev/null)}"
+[ -z "$BLOCK_START" ] && BLOCK_START=9
+BLOCK_END="${MOONLIGHT_BLOCK_END:-$(git config --get moonlight-commit.blockEnd 2>/dev/null)}"
+[ -z "$BLOCK_END" ] && BLOCK_END=17
+BLOCK_DAYS="${MOONLIGHT_BLOCK_DAYS:-$(git config --get moonlight-commit.blockDays 2>/dev/null)}"
+[ -z "$BLOCK_DAYS" ] && BLOCK_DAYS="1,2,3,4,5" # Mon-Fri by default (1=Monday)
+WHITELIST_ORGS="${MOONLIGHT_WHITELIST_ORGS:-$(git config --get moonlight-commit.whitelistOrgs 2>/dev/null)}"
 
 # Get current local hour (0-23) and day of week (1=Monday, 7=Sunday)
 CURRENT_HOUR=$(date +%H)
@@ -14,6 +24,10 @@ CURRENT_DAY=$(date +%u)
 
 # Get current branch name
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+[ "$DRY_RUN" -eq 1 ] && echo "Current time: $(date '+%Y-%m-%d %H:%M:%S')" && \
+  echo "Block window: ${BLOCK_START}:00-${BLOCK_END}:00 on days ${BLOCK_DAYS}" && \
+  echo "Branch: $BRANCH_NAME"
 
 # 1. Hotfix branch exception
 echo "$BRANCH_NAME" | grep -qi "hotfix" && exit 0
@@ -26,6 +40,7 @@ ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
 REPO_ORG=$(echo "$ORIGIN_URL" | sed -E 's#.*[:/]{1,2}([^/]+)/.*#\1#')
 for org in ${WHITELIST_ORGS//,/ }; do
   if [ "$REPO_ORG" = "$org" ]; then
+    [ "$DRY_RUN" -eq 1 ] && echo "Org '$REPO_ORG' whitelisted" && exit 0
     exit 0
   fi
 done
@@ -46,13 +61,22 @@ if [ "$DAY_ALLOWED" -eq 1 ]; then
     # Attempt override via commit message (pre-commit only sees COMMIT_EDITMSG if using -m)
     COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
     if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
+      [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
       exit 0
     fi
-    echo "❌ Commit blocked: Commits between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays are disallowed." >&2
-    echo "   Use [override], adjust timings with 'git config moonlight-commit.blockStart/blockEnd/blockDays', or whitelist your org." >&2
-    exit 1
+    MSG="Commit blocked: between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays"
+    if [ "$DRY_RUN" -eq 1 ]; then
+      echo "❌ $MSG" >&2
+      echo "Use [override] or adjust config" >&2
+      exit 0
+    else
+      echo "❌ $MSG" >&2
+      echo "   Use [override], adjust timings with 'git config moonlight-commit.blockStart/blockEnd/blockDays', or whitelist your org." >&2
+      exit 1
+    fi
   fi
 fi
 
 # Otherwise allow commit
+[ "$DRY_RUN" -eq 1 ] && echo "✅ Commit allowed" && exit 0
 exit 0

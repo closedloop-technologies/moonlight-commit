@@ -1,11 +1,14 @@
 #!/bin/sh
 # moonlight-commit commit-msg hook enforcing override during block window with day filtering and whitelist
 
-# Load configuration with defaults
-BLOCK_START=$(git config --get moonlight-commit.blockStart || echo "9")
-BLOCK_END=$(git config --get moonlight-commit.blockEnd || echo "17")
-BLOCK_DAYS=$(git config --get moonlight-commit.blockDays || echo "1,2,3,4,5")
-WHITELIST_ORGS=$(git config --get moonlight-commit.whitelistOrgs || echo "")
+# Load configuration with defaults. Environment variables override git config.
+BLOCK_START="${MOONLIGHT_BLOCK_START:-$(git config --get moonlight-commit.blockStart 2>/dev/null)}"
+[ -z "$BLOCK_START" ] && BLOCK_START=9
+BLOCK_END="${MOONLIGHT_BLOCK_END:-$(git config --get moonlight-commit.blockEnd 2>/dev/null)}"
+[ -z "$BLOCK_END" ] && BLOCK_END=17
+BLOCK_DAYS="${MOONLIGHT_BLOCK_DAYS:-$(git config --get moonlight-commit.blockDays 2>/dev/null)}"
+[ -z "$BLOCK_DAYS" ] && BLOCK_DAYS="1,2,3,4,5"
+WHITELIST_ORGS="${MOONLIGHT_WHITELIST_ORGS:-$(git config --get moonlight-commit.whitelistOrgs 2>/dev/null)}"
 
 # Get current local hour and day of week
 CURRENT_HOUR=$(date +%H)

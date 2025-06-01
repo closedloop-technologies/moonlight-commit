@@ -1,59 +1,48 @@
-#!/usr/bin/env bash
-# moonlight-commit installer - installs hooks globally with executable permissions
-# Passing --uninstall restores the previous hooksPath if recorded
+#!/bin/sh
+# moonlight-commit installer
+# Installs the pre-commit hook into the current repo's hooks directory.
+# Usage: ./install.sh [--dry-run]
 
-set -euo pipefail
+set -e
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOKS_DIR="$HOME/.git-hooks"
-BACKUP_FILE="$HOOKS_DIR.previous"
+dry_run=0
+if [ "${1:-}" = "--dry-run" ]; then
+  dry_run=1
+fi
 
-if [[ "${1:-}" == "--uninstall" ]]; then
-  if [ -f "$BACKUP_FILE" ]; then
-    PREV=$(cat "$BACKUP_FILE")
-    if [ -n "$PREV" ]; then
-      git config --global core.hooksPath "$PREV"
-      echo "Restored core.hooksPath to $PREV"
-    else
-      git config --global --unset core.hooksPath
-      echo "Removed core.hooksPath setting"
-    fi
-    rm -f "$BACKUP_FILE"
-    echo "moonlight-commit uninstalled."
+repo_root=$(git rev-parse --git-dir 2>/dev/null)
+if [ -z "$repo_root" ]; then
+  echo "Not inside a git repository" >&2
+  exit 1
+fi
+
+hooks_path=$(git config core.hooksPath || true)
+if [ -z "$hooks_path" ]; then
+  hooks_path="$repo_root/hooks"
+fi
+
+mkdir_cmd="mkdir -p $hooks_path"
+copy_cmd="cp hooks/pre-commit $hooks_path/pre-commit.moonlight"
+chmod_cmd="chmod +x $hooks_path/pre-commit.moonlight"
+link_cmd="ln -s pre-commit.moonlight $hooks_path/pre-commit"
+
+if [ "$dry_run" -eq 1 ]; then
+  echo "Would run: $mkdir_cmd"
+  echo "Would run: $copy_cmd"
+  echo "Would run: $chmod_cmd"
+  if [ ! -e "$hooks_path/pre-commit" ]; then
+    echo "Would create symlink: $link_cmd"
   else
-    echo "moonlight-commit was not installed." >&2
+    echo "Pre-commit hook already exists at $hooks_path/pre-commit"
   fi
   exit 0
 fi
 
-echo "Installing moonlight-commit hooks globally..."
-
-EXISTING=$(git config --global --get core.hooksPath || true)
-if [ -n "$EXISTING" ] && [ "$EXISTING" != "$HOOKS_DIR" ]; then
-  echo "Existing global hooks found at '$EXISTING'."
-  read -r -p "Back up and override with moonlight-commit? [y/N] " resp
-  if [[ "$resp" =~ ^[Yy]$ ]]; then
-    BACKUP_DIR="$EXISTING.backup.$(date +%s)"
-    mkdir -p "$BACKUP_DIR"
-    cp -r "$EXISTING"/* "$BACKUP_DIR" 2>/dev/null || true
-    echo "Backed up existing hooks to $BACKUP_DIR"
-    echo "$EXISTING" > "$BACKUP_FILE"
-  else
-    echo "Aborting installation."
-    exit 1
-  fi
-else
-  : > "$BACKUP_FILE"
+$mkdir_cmd
+$copy_cmd
+$chmod_cmd
+if [ ! -e "$hooks_path/pre-commit" ]; then
+  (cd "$hooks_path" && ln -s pre-commit.moonlight pre-commit)
 fi
 
-mkdir -p "$HOOKS_DIR"
-
-cp "$DIR/hooks/pre-commit" "$HOOKS_DIR/pre-commit"
-cp "$DIR/hooks/commit-msg" "$HOOKS_DIR/commit-msg"
-
-chmod +x "$HOOKS_DIR/pre-commit" "$HOOKS_DIR/commit-msg"
-
-git config --global core.hooksPath "$HOOKS_DIR"
-
-echo "✅ moonlight-commit installed globally!"
-echo "Run './install.sh --uninstall' to restore previous settings."
+echo "✅ moonlight-commit installed to $hooks_path"
