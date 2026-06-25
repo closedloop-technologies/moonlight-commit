@@ -76,6 +76,24 @@ test_installer_rejects_unknown_args() {
   echo "✅"
 }
 
+test_installer_rejects_extra_args() {
+  echo -n "→ Testing installer rejects extra arguments ... "
+  rm -rf /tmp/install-repo && mkdir -p /tmp/install-repo
+  cd /tmp/install-repo
+  git init -q
+
+  if /usr/src/app/install.sh --dry-run --force >/tmp/moonlight-install-extra.log 2>&1; then
+    echo "❌"
+    echo "Installer should reject extra arguments"; exit 1
+  fi
+
+  grep -q "Usage: ./install.sh \\[--dry-run\\]" /tmp/moonlight-install-extra.log
+  test ! -e .git/hooks/pre-commit.moonlight
+  test ! -e .git/hooks/commit-msg.moonlight
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -168,6 +186,7 @@ fi
 test_installer "local script" "/usr/src/app/install.sh"
 test_installer "download fallback" "MOONLIGHT_COMMIT_RAW_BASE=file:///usr/src/app sh < /usr/src/app/install.sh"
 test_installer_rejects_unknown_args
+test_installer_rejects_extra_args
 
 echo
 echo "🎉 All tests passed!"

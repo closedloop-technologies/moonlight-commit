@@ -8,6 +8,11 @@ set -e
 RAW_BASE="${MOONLIGHT_COMMIT_RAW_BASE:-https://raw.githubusercontent.com/closedloop-technologies/moonlight-commit/main}"
 
 dry_run=0
+if [ "$#" -gt 1 ]; then
+  echo "Usage: ./install.sh [--dry-run]" >&2
+  exit 2
+fi
+
 case "${1:-}" in
   "")
     ;;
