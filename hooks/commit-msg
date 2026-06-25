@@ -26,6 +26,43 @@ csv_contains() {
   return 1
 }
 
+is_integer() {
+  case "$1" in
+    ""|*[!0-9]*)
+      return 1
+      ;;
+  esac
+  return 0
+}
+
+validate_config() {
+  if ! is_integer "$BLOCK_START" || [ "$BLOCK_START" -lt 0 ] || [ "$BLOCK_START" -gt 23 ]; then
+    echo "❌ moonlight-commit.blockStart must be an integer from 0 to 23" >&2
+    exit 1
+  fi
+  if ! is_integer "$BLOCK_END" || [ "$BLOCK_END" -lt 1 ] || [ "$BLOCK_END" -gt 24 ]; then
+    echo "❌ moonlight-commit.blockEnd must be an integer from 1 to 24" >&2
+    exit 1
+  fi
+  if [ "$BLOCK_START" -ge "$BLOCK_END" ]; then
+    echo "❌ moonlight-commit.blockStart must be before blockEnd" >&2
+    exit 1
+  fi
+  old_ifs=$IFS
+  IFS=,
+  for day in $BLOCK_DAYS; do
+    IFS=$old_ifs
+    if ! is_integer "$day" || [ "$day" -lt 1 ] || [ "$day" -gt 7 ]; then
+      echo "❌ moonlight-commit.blockDays must contain comma-separated integers from 1 to 7" >&2
+      exit 1
+    fi
+    IFS=,
+  done
+  IFS=$old_ifs
+}
+
+validate_config
+
 # Get current local hour and day of week
 CURRENT_HOUR=$(date +%H)
 CURRENT_HOUR=${CURRENT_HOUR#0}

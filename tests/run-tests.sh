@@ -130,6 +130,46 @@ test_installer_cleans_downloaded_hooks_from_custom_tmpdir() {
   echo "✅"
 }
 
+test_rejects_invalid_block_window_config() {
+  echo -n "→ Testing hooks reject invalid block window config ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "# invalid config" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/invalid-config
+  echo "change" >> README.md
+  git add README.md
+
+  if MOONLIGHT_BLOCK_START=abc faketime -f "2025-04-30 10:15:00" git commit -q -m "invalid config" >/tmp/moonlight-invalid-config.log 2>&1; then
+    echo "❌"
+    echo "Invalid blockStart should have failed"; exit 1
+  fi
+
+  grep -q "moonlight-commit.blockStart must be an integer from 0 to 23" /tmp/moonlight-invalid-config.log
+
+  echo "✅"
+}
+
+test_commit_msg_rejects_invalid_day_config() {
+  echo -n "→ Testing commit-msg rejects invalid day config ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  echo "message" > /tmp/moonlight-commit-message
+
+  if MOONLIGHT_BLOCK_DAYS=1,8 /usr/src/app/hooks/commit-msg /tmp/moonlight-commit-message >/tmp/moonlight-invalid-days.log 2>&1; then
+    echo "❌"
+    echo "Invalid blockDays should have failed"; exit 1
+  fi
+
+  grep -q "moonlight-commit.blockDays must contain comma-separated integers from 1 to 7" /tmp/moonlight-invalid-days.log
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -225,6 +265,8 @@ test_installer_rejects_unknown_args
 test_installer_rejects_extra_args
 test_installer_respects_relative_hooks_path_from_subdir
 test_installer_cleans_downloaded_hooks_from_custom_tmpdir
+test_rejects_invalid_block_window_config
+test_commit_msg_rejects_invalid_day_config
 
 echo
 echo "🎉 All tests passed!"
