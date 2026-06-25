@@ -55,6 +55,12 @@ validate_config() {
     echo "❌ moonlight-commit.blockStart must be before blockEnd" >&2
     exit 1
   fi
+  case "$BLOCK_DAYS" in
+    *,,*|,*|*,)
+      echo "❌ moonlight-commit.blockDays must not contain empty entries" >&2
+      exit 1
+      ;;
+  esac
   old_ifs=$IFS
   IFS=,
   for day in $BLOCK_DAYS; do

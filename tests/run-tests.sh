@@ -170,6 +170,29 @@ test_commit_msg_rejects_invalid_day_config() {
   echo "✅"
 }
 
+test_hooks_reject_empty_day_entries() {
+  echo -n "→ Testing hooks reject empty block day entries ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "# empty day entries" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/empty-days
+  echo "change" >> README.md
+  git add README.md
+
+  if MOONLIGHT_BLOCK_DAYS=1,,2 faketime -f "2025-04-30 10:15:00" git commit -q -m "empty day config" >/tmp/moonlight-empty-days.log 2>&1; then
+    echo "❌"
+    echo "Empty blockDays entries should have failed"; exit 1
+  fi
+
+  grep -q "moonlight-commit.blockDays must not contain empty entries" /tmp/moonlight-empty-days.log
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -267,6 +290,7 @@ test_installer_respects_relative_hooks_path_from_subdir
 test_installer_cleans_downloaded_hooks_from_custom_tmpdir
 test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config
+test_hooks_reject_empty_day_entries
 
 echo
 echo "🎉 All tests passed!"
