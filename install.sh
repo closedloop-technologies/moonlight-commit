@@ -25,16 +25,12 @@ case "${1:-}" in
     ;;
 esac
 
-git_dir=$(git rev-parse --git-dir 2>/dev/null || true)
-if [ -z "$git_dir" ]; then
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "Not inside a git repository" >&2
   exit 1
 fi
 
-hooks_path=$(git config core.hooksPath || true)
-if [ -z "$hooks_path" ]; then
-  hooks_path="$git_dir/hooks"
-fi
+hooks_path=$(git rev-parse --path-format=absolute --git-path hooks)
 
 script_dir=
 case "$0" in

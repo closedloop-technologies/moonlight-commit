@@ -94,6 +94,26 @@ test_installer_rejects_extra_args() {
   echo "✅"
 }
 
+test_installer_respects_relative_hooks_path_from_subdir() {
+  echo -n "→ Testing installer resolves relative hooksPath from subdirectory ... "
+  rm -rf /tmp/install-repo && mkdir -p /tmp/install-repo/src
+  cd /tmp/install-repo
+  git init -q
+  git config core.hooksPath .githooks
+  cd src
+
+  /usr/src/app/install.sh >/tmp/moonlight-install-relative-hookspath.log
+
+  test -x /tmp/install-repo/.githooks/pre-commit.moonlight
+  test -x /tmp/install-repo/.githooks/commit-msg.moonlight
+  test -L /tmp/install-repo/.githooks/pre-commit
+  test -L /tmp/install-repo/.githooks/commit-msg
+  test ! -e /tmp/install-repo/src/.githooks/pre-commit.moonlight
+  test ! -e /tmp/install-repo/src/.githooks/commit-msg.moonlight
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -187,6 +207,7 @@ test_installer "local script" "/usr/src/app/install.sh"
 test_installer "download fallback" "MOONLIGHT_COMMIT_RAW_BASE=file:///usr/src/app sh < /usr/src/app/install.sh"
 test_installer_rejects_unknown_args
 test_installer_rejects_extra_args
+test_installer_respects_relative_hooks_path_from_subdir
 
 echo
 echo "🎉 All tests passed!"
