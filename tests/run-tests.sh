@@ -193,6 +193,40 @@ test_hooks_reject_empty_day_entries() {
   echo "✅"
 }
 
+test_pre_commit_rejects_unknown_args() {
+  echo -n "→ Testing pre-commit rejects unknown arguments ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+
+  if /usr/src/app/hooks/pre-commit --force >/tmp/moonlight-pre-commit-unknown.log 2>&1; then
+    echo "❌"
+    echo "pre-commit should reject unknown arguments"; exit 1
+  fi
+
+  grep -q "Usage: pre-commit \\[--dry-run\\]" /tmp/moonlight-pre-commit-unknown.log
+
+  echo "✅"
+}
+
+test_pre_commit_rejects_extra_args() {
+  echo -n "→ Testing pre-commit rejects extra arguments ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+
+  if /usr/src/app/hooks/pre-commit --dry-run --force >/tmp/moonlight-pre-commit-extra.log 2>&1; then
+    echo "❌"
+    echo "pre-commit should reject extra arguments"; exit 1
+  fi
+
+  grep -q "Usage: pre-commit \\[--dry-run\\]" /tmp/moonlight-pre-commit-extra.log
+
+  echo "✅"
+}
+
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir() {
   echo -n "→ Testing pre-commit resolves relative hooksPath from subdirectory ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo/.githooks /tmp/repo/src
@@ -318,6 +352,8 @@ test_installer_cleans_downloaded_hooks_from_custom_tmpdir
 test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config
 test_hooks_reject_empty_day_entries
+test_pre_commit_rejects_unknown_args
+test_pre_commit_rejects_extra_args
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
 
 echo

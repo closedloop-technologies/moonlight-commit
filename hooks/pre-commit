@@ -2,10 +2,27 @@
 # moonlight-commit pre-commit hook with configurable block window, day filtering,
 # org whitelist, and vacation flag. Supports --dry-run for verbose testing.
 
+usage() {
+  echo "Usage: pre-commit [--dry-run]" >&2
+}
+
 DRY_RUN=0
-if [ "${1:-}" = "--dry-run" ]; then
-  DRY_RUN=1
+if [ "$#" -gt 1 ]; then
+  usage
+  exit 2
 fi
+
+case "${1:-}" in
+  "")
+    ;;
+  "--dry-run")
+    DRY_RUN=1
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
 
 # Load configuration with defaults. Environment variables take precedence over
 # git config so hooks can be tested without touching user config.
