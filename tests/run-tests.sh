@@ -227,6 +227,39 @@ test_pre_commit_rejects_extra_args() {
   echo "✅"
 }
 
+test_commit_msg_rejects_missing_args() {
+  echo -n "→ Testing commit-msg rejects missing message file argument ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+
+  if /usr/src/app/hooks/commit-msg >/tmp/moonlight-commit-msg-missing.log 2>&1; then
+    echo "❌"
+    echo "commit-msg should reject missing arguments"; exit 1
+  fi
+
+  grep -q "Usage: commit-msg <commit-msg-file>" /tmp/moonlight-commit-msg-missing.log
+
+  echo "✅"
+}
+
+test_commit_msg_rejects_extra_args() {
+  echo -n "→ Testing commit-msg rejects extra arguments ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  echo "message" > /tmp/moonlight-commit-message
+
+  if /usr/src/app/hooks/commit-msg /tmp/moonlight-commit-message extra >/tmp/moonlight-commit-msg-extra.log 2>&1; then
+    echo "❌"
+    echo "commit-msg should reject extra arguments"; exit 1
+  fi
+
+  grep -q "Usage: commit-msg <commit-msg-file>" /tmp/moonlight-commit-msg-extra.log
+
+  echo "✅"
+}
+
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir() {
   echo -n "→ Testing pre-commit resolves relative hooksPath from subdirectory ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo/.githooks /tmp/repo/src
@@ -354,6 +387,8 @@ test_commit_msg_rejects_invalid_day_config
 test_hooks_reject_empty_day_entries
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
+test_commit_msg_rejects_missing_args
+test_commit_msg_rejects_extra_args
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
 
 echo
