@@ -29,6 +29,35 @@ test_commit() {
   fi
 }
 
+test_installer() {
+  local label="$1"
+  local installer_cmd="$2"
+  echo -n "→ Testing installer via $label ... "
+  rm -rf /tmp/install-repo && mkdir -p /tmp/install-repo
+  cd /tmp/install-repo
+  git init -q
+  eval "$installer_cmd" >/tmp/moonlight-install.log
+
+  test -x .git/hooks/pre-commit.moonlight
+  test -x .git/hooks/commit-msg.moonlight
+  test -L .git/hooks/pre-commit
+  test -L .git/hooks/commit-msg
+
+  echo "# installer" > README.md
+  git add README.md
+  git commit -q -m "init"
+  git checkout -q -b feature/installer
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 10:15:00" git commit -q -m "feature during hours"; then
+    echo "❌"
+    echo "Installed hooks should have blocked the commit"; exit 1
+  fi
+
+  echo "✅"
+}
+
 echo
 echo "🧪 moonlight-commit automated tests"
 echo "-----------------------------------"
@@ -77,7 +106,7 @@ else
 fi
 
 # 7) Whitelisted org bypass
-mkdir -p /tmp/repo && cd /tmp/repo
+rm -rf /tmp/repo && mkdir -p /tmp/repo && cd /tmp/repo
 git init -q
 git config core.hooksPath /usr/src/app/hooks
 git config moonlight-commit.whitelistOrgs "myorg"
@@ -96,6 +125,9 @@ if faketime -f "2025-04-30 10:00:00" git commit -q -m "commit during hours"; the
 else
   echo "✗ Whitelisted org commit blocked"; exit 1
 fi
+
+test_installer "local script" "/usr/src/app/install.sh"
+test_installer "download fallback" "MOONLIGHT_COMMIT_RAW_BASE=file:///usr/src/app sh < /usr/src/app/install.sh"
 
 echo
 echo "🎉 All tests passed!"

@@ -17,6 +17,22 @@ BLOCK_DAYS="${MOONLIGHT_BLOCK_DAYS:-$(git config --get moonlight-commit.blockDay
 [ -z "$BLOCK_DAYS" ] && BLOCK_DAYS="1,2,3,4,5" # Mon-Fri by default (1=Monday)
 WHITELIST_ORGS="${MOONLIGHT_WHITELIST_ORGS:-$(git config --get moonlight-commit.whitelistOrgs 2>/dev/null)}"
 
+csv_contains() {
+  needle="$1"
+  haystack="$2"
+  old_ifs=$IFS
+  IFS=,
+  for item in $haystack; do
+    IFS=$old_ifs
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+    IFS=,
+  done
+  IFS=$old_ifs
+  return 1
+}
+
 # Get current local hour (0-23) and day of week (1=Monday, 7=Sunday)
 CURRENT_HOUR=$(date +%H)
 CURRENT_HOUR=${CURRENT_HOUR#0}
@@ -38,22 +54,17 @@ echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
 # 3. Org whitelist exception (parse origin URL)
 ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
 REPO_ORG=$(echo "$ORIGIN_URL" | sed -E 's#.*[:/]{1,2}([^/]+)/.*#\1#')
-for org in ${WHITELIST_ORGS//,/ }; do
-  if [ "$REPO_ORG" = "$org" ]; then
-    [ "$DRY_RUN" -eq 1 ] && echo "Org '$REPO_ORG' whitelisted" && exit 0
-    exit 0
-  fi
-done
+if csv_contains "$REPO_ORG" "$WHITELIST_ORGS"; then
+  [ "$DRY_RUN" -eq 1 ] && echo "Org '$REPO_ORG' whitelisted" && exit 0
+  exit 0
+fi
 
 # 4. Check if current day is in block days
-DAY_ALLOWED=0
-IFS=',' read -r -a DAYS_ARRAY <<< "$BLOCK_DAYS"
-for d in "${DAYS_ARRAY[@]}"; do
-  if [ "$CURRENT_DAY" -eq "$d" ]; then
-    DAY_ALLOWED=1
-    break
-  fi
-done
+if csv_contains "$CURRENT_DAY" "$BLOCK_DAYS"; then
+  DAY_ALLOWED=1
+else
+  DAY_ALLOWED=0
+fi
 
 if [ "$DAY_ALLOWED" -eq 1 ]; then
   # 5. Time window check: block if CURRENT_HOUR in [BLOCK_START, BLOCK_END)
@@ -62,6 +73,12 @@ if [ "$DAY_ALLOWED" -eq 1 ]; then
     COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
     if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
       [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
+      exit 0
+    fi
+    HOOKS_PATH=$(git config --get core.hooksPath 2>/dev/null || true)
+    [ -z "$HOOKS_PATH" ] && HOOKS_PATH=$(git rev-parse --git-path hooks)
+    if [ -x "$HOOKS_PATH/commit-msg" ]; then
+      [ "$DRY_RUN" -eq 1 ] && echo "Blocked-window decision deferred to commit-msg hook" && exit 0
       exit 0
     fi
     MSG="Commit blocked: between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays"

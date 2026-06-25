@@ -59,7 +59,7 @@ Use `[override]` in commit messages to force a commit during the block window.
 Automated tests run inside Docker with time and day simulation.
 
 ```bash
-docker build -t moonlight-commit-test tests
+docker build -f tests/Dockerfile -t moonlight-commit-test .
 docker run --rm moonlight-commit-test
 ```
 

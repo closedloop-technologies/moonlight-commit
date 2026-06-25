@@ -10,6 +10,22 @@ BLOCK_DAYS="${MOONLIGHT_BLOCK_DAYS:-$(git config --get moonlight-commit.blockDay
 [ -z "$BLOCK_DAYS" ] && BLOCK_DAYS="1,2,3,4,5"
 WHITELIST_ORGS="${MOONLIGHT_WHITELIST_ORGS:-$(git config --get moonlight-commit.whitelistOrgs 2>/dev/null)}"
 
+csv_contains() {
+  needle="$1"
+  haystack="$2"
+  old_ifs=$IFS
+  IFS=,
+  for item in $haystack; do
+    IFS=$old_ifs
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+    IFS=,
+  done
+  IFS=$old_ifs
+  return 1
+}
+
 # Get current local hour and day of week
 CURRENT_HOUR=$(date +%H)
 CURRENT_HOUR=${CURRENT_HOUR#0}
@@ -25,19 +41,16 @@ echo "$BRANCH_NAME" | grep -qi "hotfix" && exit 0
 echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
 
 # Skip checks for whitelisted orgs
-for org in ${WHITELIST_ORGS//,/ }; do
-  if [ "$REPO_ORG" = "$org" ]; then exit 0; fi
-done
+if csv_contains "$REPO_ORG" "$WHITELIST_ORGS"; then
+  exit 0
+fi
 
 # Check if current day is in block days
-DAY_ALLOWED=0
-IFS=',' read -r -a DAYS_ARRAY <<< "$BLOCK_DAYS"
-for d in "${DAYS_ARRAY[@]}"; do
-  if [ "$CURRENT_DAY" -eq "$d" ]; then
-    DAY_ALLOWED=1
-    break
-  fi
-done
+if csv_contains "$CURRENT_DAY" "$BLOCK_DAYS"; then
+  DAY_ALLOWED=1
+else
+  DAY_ALLOWED=0
+fi
 
 if [ "$DAY_ALLOWED" -eq 1 ]; then
   # If within blocked hours, enforce [override] keyword
