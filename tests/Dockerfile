@@ -16,6 +16,7 @@ RUN git config --global user.email "test@example.com" \
 WORKDIR /usr/src/app
 COPY hooks/ ./hooks/
 RUN chmod +x hooks/pre-commit hooks/commit-msg
+COPY pages/ ./pages/
 COPY install.sh ./install.sh
 RUN chmod +x install.sh
 

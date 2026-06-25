@@ -76,9 +76,30 @@ test_installer_rejects_unknown_args() {
   echo "✅"
 }
 
+test_page_assets() {
+  echo -n "→ Testing landing page local asset references ... "
+  cd /usr/src/app
+
+  while IFS= read -r url; do
+    case "$url" in
+      ""|"#"|http://*|https://*|mailto:*|tel:*)
+        continue
+        ;;
+    esac
+    if [ ! -e "pages/$url" ]; then
+      echo "❌"
+      echo "Missing page asset: $url"; exit 1
+    fi
+  done < <(grep -Eo '(src|href)="[^"]+"' pages/index.html | sed -E 's/^[^"]+"([^"]+)"/\1/')
+
+  echo "✅"
+}
+
 echo
 echo "🧪 moonlight-commit automated tests"
 echo "-----------------------------------"
+
+test_page_assets
 
 # 1) During working hours Mon-Fri → should be blocked
 # 2025-04-30 is Wednesday
