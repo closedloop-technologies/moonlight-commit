@@ -8,9 +8,17 @@ set -e
 RAW_BASE="${MOONLIGHT_COMMIT_RAW_BASE:-https://raw.githubusercontent.com/closedloop-technologies/moonlight-commit/main}"
 
 dry_run=0
-if [ "${1:-}" = "--dry-run" ]; then
-  dry_run=1
-fi
+case "${1:-}" in
+  "")
+    ;;
+  "--dry-run")
+    dry_run=1
+    ;;
+  *)
+    echo "Usage: ./install.sh [--dry-run]" >&2
+    exit 2
+    ;;
+esac
 
 git_dir=$(git rev-parse --git-dir 2>/dev/null || true)
 if [ -z "$git_dir" ]; then

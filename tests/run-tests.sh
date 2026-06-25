@@ -15,7 +15,7 @@ test_commit() {
   git config core.hooksPath /usr/src/app/hooks
   echo "# $$" > README.md
   git add README.md
-  git commit -q -m "init"
+  git commit --no-verify -q -m "init"
   git checkout -b "$branch"
   echo "change" >> README.md
   git add README.md
@@ -45,7 +45,7 @@ test_installer() {
 
   echo "# installer" > README.md
   git add README.md
-  git commit -q -m "init"
+  git commit --no-verify -q -m "init"
   git checkout -q -b feature/installer
   echo "change" >> README.md
   git add README.md
@@ -54,6 +54,24 @@ test_installer() {
     echo "❌"
     echo "Installed hooks should have blocked the commit"; exit 1
   fi
+
+  echo "✅"
+}
+
+test_installer_rejects_unknown_args() {
+  echo -n "→ Testing installer rejects unknown arguments ... "
+  rm -rf /tmp/install-repo && mkdir -p /tmp/install-repo
+  cd /tmp/install-repo
+  git init -q
+
+  if /usr/src/app/install.sh --force >/tmp/moonlight-install-unknown.log 2>&1; then
+    echo "❌"
+    echo "Installer should reject unknown arguments"; exit 1
+  fi
+
+  grep -q "Usage: ./install.sh \\[--dry-run\\]" /tmp/moonlight-install-unknown.log
+  test ! -e .git/hooks/pre-commit.moonlight
+  test ! -e .git/hooks/commit-msg.moonlight
 
   echo "✅"
 }
@@ -113,7 +131,7 @@ git config moonlight-commit.whitelistOrgs "myorg"
 # prepare repo
 echo "# test" > README.md
 git add README.md
-git commit -q -m "init"
+git commit --no-verify -q -m "init"
 git remote add origin git@github.com:myorg/repo.git
 
 # commit during working hours should succeed
@@ -128,6 +146,7 @@ fi
 
 test_installer "local script" "/usr/src/app/install.sh"
 test_installer "download fallback" "MOONLIGHT_COMMIT_RAW_BASE=file:///usr/src/app sh < /usr/src/app/install.sh"
+test_installer_rejects_unknown_args
 
 echo
 echo "🎉 All tests passed!"
