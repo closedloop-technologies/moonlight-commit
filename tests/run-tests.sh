@@ -359,7 +359,7 @@ fi
 rm -rf /tmp/repo && mkdir -p /tmp/repo && cd /tmp/repo
 git init -q
 git config core.hooksPath /usr/src/app/hooks
-git config moonlight-commit.whitelistOrgs "myorg"
+git config moonlight-commit.whitelistOrgs "other-org, myorg"
 # prepare repo
 echo "# test" > README.md
 git add README.md

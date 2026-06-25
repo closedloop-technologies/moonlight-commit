@@ -26,6 +26,7 @@ csv_contains() {
   IFS=,
   for item in $haystack; do
     IFS=$old_ifs
+    item=$(printf '%s' "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     if [ "$item" = "$needle" ]; then
       return 0
     fi
