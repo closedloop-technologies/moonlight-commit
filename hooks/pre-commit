@@ -118,7 +118,7 @@ if [ "$DAY_ALLOWED" -eq 1 ]; then
       [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
       exit 0
     fi
-    HOOKS_PATH=$(git config --get core.hooksPath 2>/dev/null || true)
+    HOOKS_PATH=$(git rev-parse --path-format=absolute --git-path hooks 2>/dev/null || true)
     [ -z "$HOOKS_PATH" ] && HOOKS_PATH=$(git rev-parse --git-path hooks)
     if [ -x "$HOOKS_PATH/commit-msg" ]; then
       [ "$DRY_RUN" -eq 1 ] && echo "Blocked-window decision deferred to commit-msg hook" && exit 0

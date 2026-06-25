@@ -193,6 +193,33 @@ test_hooks_reject_empty_day_entries() {
   echo "✅"
 }
 
+test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir() {
+  echo -n "→ Testing pre-commit resolves relative hooksPath from subdirectory ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo/.githooks /tmp/repo/src
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath .githooks
+  cp /usr/src/app/hooks/pre-commit .githooks/pre-commit
+  cp /usr/src/app/hooks/commit-msg .githooks/commit-msg
+  chmod +x .githooks/pre-commit .githooks/commit-msg
+  echo "# relative hooksPath" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/relative-hooks
+  cd src
+  echo "change" > nested.txt
+  git add nested.txt
+
+  if faketime -f "2025-04-30 10:15:00" git commit -q -m "nested commit" >/tmp/moonlight-relative-hookspath.log 2>&1; then
+    echo "❌"
+    echo "Blocked-window commit without override should have failed"; exit 1
+  fi
+
+  grep -q "Commit message 'nested commit' blocked" /tmp/moonlight-relative-hookspath.log
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -291,6 +318,7 @@ test_installer_cleans_downloaded_hooks_from_custom_tmpdir
 test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config
 test_hooks_reject_empty_day_entries
+test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
 
 echo
 echo "🎉 All tests passed!"
