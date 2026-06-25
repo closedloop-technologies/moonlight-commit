@@ -114,6 +114,22 @@ test_installer_respects_relative_hooks_path_from_subdir() {
   echo "✅"
 }
 
+test_installer_cleans_downloaded_hooks_from_custom_tmpdir() {
+  echo -n "→ Testing installer cleans downloaded hooks from custom TMPDIR ... "
+  rm -rf /tmp/install-repo /tmp/moonlight-custom-tmp
+  mkdir -p /tmp/install-repo /tmp/moonlight-custom-tmp
+  cd /tmp/install-repo
+  git init -q
+
+  TMPDIR=/tmp/moonlight-custom-tmp MOONLIGHT_COMMIT_RAW_BASE=file:///usr/src/app sh < /usr/src/app/install.sh >/tmp/moonlight-install-custom-tmp.log
+
+  test -x .git/hooks/pre-commit.moonlight
+  test -x .git/hooks/commit-msg.moonlight
+  test -z "$(find /tmp/moonlight-custom-tmp -type f -name 'moonlight-commit-*' -print -quit)"
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -208,6 +224,7 @@ test_installer "download fallback" "MOONLIGHT_COMMIT_RAW_BASE=file:///usr/src/ap
 test_installer_rejects_unknown_args
 test_installer_rejects_extra_args
 test_installer_respects_relative_hooks_path_from_subdir
+test_installer_cleans_downloaded_hooks_from_custom_tmpdir
 
 echo
 echo "🎉 All tests passed!"

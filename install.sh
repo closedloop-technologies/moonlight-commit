@@ -67,6 +67,20 @@ install_hook() {
   fi
 }
 
+cleanup_hook_source() {
+  source_file="$1"
+  case "$source_file" in
+    "$script_dir"/hooks/*)
+      return 0
+      ;;
+  esac
+  case "$source_file" in
+    "${TMPDIR:-/tmp}"/moonlight-commit-*)
+      rm -f "$source_file"
+      ;;
+  esac
+}
+
 if [ "$dry_run" -eq 1 ]; then
   echo "Would create hooks directory: $hooks_path"
   for hook_name in pre-commit commit-msg; do
@@ -88,8 +102,7 @@ commit_msg_source=$(hook_source commit-msg)
 install_hook pre-commit "$pre_commit_source"
 install_hook commit-msg "$commit_msg_source"
 
-case "$pre_commit_source $commit_msg_source" in
-  *"/tmp/moonlight-commit-"*) rm -f "$pre_commit_source" "$commit_msg_source" ;;
-esac
+cleanup_hook_source "$pre_commit_source"
+cleanup_hook_source "$commit_msg_source"
 
 echo "✅ moonlight-commit installed to $hooks_path"
