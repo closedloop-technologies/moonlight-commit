@@ -90,6 +90,27 @@ validate_config() {
     IFS=,
   done
   IFS=$old_ifs
+
+  if [ -n "$WHITELIST_ORGS" ]; then
+    case "$WHITELIST_ORGS" in
+      *,,*|,*|*,)
+        echo "❌ moonlight-commit.whitelistOrgs must not contain empty entries" >&2
+        exit 1
+        ;;
+    esac
+    old_ifs=$IFS
+    IFS=,
+    for org in $WHITELIST_ORGS; do
+      IFS=$old_ifs
+      org=$(printf '%s' "$org" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      if [ -z "$org" ]; then
+        echo "❌ moonlight-commit.whitelistOrgs must not contain empty entries" >&2
+        exit 1
+      fi
+      IFS=,
+    done
+    IFS=$old_ifs
+  fi
 }
 
 validate_config
