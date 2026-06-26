@@ -130,6 +130,28 @@ test_installer_cleans_downloaded_hooks_from_custom_tmpdir() {
   echo "✅"
 }
 
+test_installer_cleans_partial_download_after_failure() {
+  echo -n "→ Testing installer cleans partial downloads after failure ... "
+  rm -rf /tmp/install-repo /tmp/moonlight-partial-tmp /tmp/moonlight-partial-base
+  mkdir -p /tmp/install-repo /tmp/moonlight-partial-tmp /tmp/moonlight-partial-base/hooks
+  cd /tmp/install-repo
+  git init -q
+  cp /usr/src/app/hooks/pre-commit /tmp/moonlight-partial-base/hooks/pre-commit
+
+  if TMPDIR=/tmp/moonlight-partial-tmp \
+    MOONLIGHT_COMMIT_RAW_BASE=file:///tmp/moonlight-partial-base \
+    sh < /usr/src/app/install.sh >/tmp/moonlight-install-partial-download.log 2>&1; then
+    echo "❌"
+    echo "Installer should fail when the second hook download is missing"; exit 1
+  fi
+
+  test -z "$(find /tmp/moonlight-partial-tmp -type f -name 'moonlight-commit-*' -print -quit)"
+  test ! -e .git/hooks/pre-commit.moonlight
+  test ! -e .git/hooks/commit-msg.moonlight
+
+  echo "✅"
+}
+
 test_installer_preserves_existing_dangling_hook_symlinks() {
   echo -n "→ Testing installer preserves existing dangling hook symlinks ... "
   rm -rf /tmp/install-repo && mkdir -p /tmp/install-repo
@@ -896,6 +918,7 @@ test_installer_rejects_unknown_args
 test_installer_rejects_extra_args
 test_installer_respects_relative_hooks_path_from_subdir
 test_installer_cleans_downloaded_hooks_from_custom_tmpdir
+test_installer_cleans_partial_download_after_failure
 test_installer_preserves_existing_dangling_hook_symlinks
 test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config

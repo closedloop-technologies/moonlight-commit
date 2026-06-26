@@ -46,9 +46,12 @@ hook_source() {
 
   if command -v curl >/dev/null 2>&1; then
     tmp_file=$(mktemp "${TMPDIR:-/tmp}/moonlight-commit-${hook_name}.XXXXXX")
-    curl -fsSL "$RAW_BASE/hooks/$hook_name" -o "$tmp_file"
-    printf '%s\n' "$tmp_file"
-    return 0
+    if curl -fsSL "$RAW_BASE/hooks/$hook_name" -o "$tmp_file"; then
+      printf '%s\n' "$tmp_file"
+      return 0
+    fi
+    rm -f "$tmp_file"
+    exit 1
   fi
 
   echo "Cannot find hooks/$hook_name locally and curl is not installed." >&2
@@ -81,6 +84,11 @@ cleanup_hook_source() {
   esac
 }
 
+cleanup_hook_sources() {
+  [ -n "${pre_commit_source:-}" ] && cleanup_hook_source "$pre_commit_source"
+  [ -n "${commit_msg_source:-}" ] && cleanup_hook_source "$commit_msg_source"
+}
+
 if [ "$dry_run" -eq 1 ]; then
   echo "Would create hooks directory: $hooks_path"
   for hook_name in pre-commit commit-msg; do
@@ -96,6 +104,10 @@ fi
 
 mkdir -p "$hooks_path"
 
+pre_commit_source=
+commit_msg_source=
+trap cleanup_hook_sources EXIT HUP INT TERM
+
 pre_commit_source=$(hook_source pre-commit)
 commit_msg_source=$(hook_source commit-msg)
 
@@ -104,5 +116,8 @@ install_hook commit-msg "$commit_msg_source"
 
 cleanup_hook_source "$pre_commit_source"
 cleanup_hook_source "$commit_msg_source"
+pre_commit_source=
+commit_msg_source=
+trap - EXIT HUP INT TERM
 
 echo "✅ moonlight-commit installed to $hooks_path"
