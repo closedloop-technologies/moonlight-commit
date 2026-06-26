@@ -71,9 +71,6 @@ github_org_from_origin() {
     https://github.com/*)
       repo_path=${origin#https://github.com/}
       ;;
-    http://github.com/*)
-      repo_path=${origin#http://github.com/}
-      ;;
     *)
       return 1
       ;;
