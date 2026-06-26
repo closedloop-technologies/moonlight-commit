@@ -59,6 +59,15 @@ is_valid_org_name() {
   return 0
 }
 
+is_valid_repo_name() {
+  case "$1" in
+    ""|"."|".."|*/*|*\\*|*[!A-Za-z0-9._-]*)
+      return 1
+      ;;
+  esac
+  return 0
+}
+
 github_org_from_origin() {
   origin="$1"
   case "$origin" in
@@ -75,8 +84,17 @@ github_org_from_origin() {
       return 1
       ;;
   esac
+  case "$repo_path" in
+    */*)
+      ;;
+    *)
+      return 1
+      ;;
+  esac
   org=${repo_path%%/*}
-  if is_valid_org_name "$org"; then
+  repo=${repo_path#*/}
+  repo=${repo%.git}
+  if is_valid_org_name "$org" && is_valid_repo_name "$repo"; then
     printf '%s\n' "$org"
     return 0
   fi

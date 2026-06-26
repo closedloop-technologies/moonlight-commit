@@ -359,6 +359,32 @@ test_whitelist_rejects_plain_http_github_origin() {
   echo "✅"
 }
 
+test_whitelist_requires_github_repo_path() {
+  echo -n "→ Testing whitelist requires GitHub owner/repo origins ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  git config moonlight-commit.whitelistOrgs "myorg"
+  echo "# missing github repo" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git remote add origin https://github.com/myorg
+  git checkout -q -b feature/missing-github-repo
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 10:00:00" git commit -q -m "missing github repo" \
+    >/tmp/moonlight-missing-github-repo.log 2>&1; then
+    echo "❌"
+    echo "GitHub origin without owner/repo should not match org whitelist"; exit 1
+  fi
+
+  grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-missing-github-repo.log
+
+  echo "✅"
+}
+
 test_hooks_block_midnight_window() {
   echo -n "→ Testing hooks block midnight window ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -613,6 +639,7 @@ test_hooks_reject_empty_whitelist_org_entries
 test_hooks_reject_invalid_whitelist_org_entries
 test_whitelist_requires_github_origin
 test_whitelist_rejects_plain_http_github_origin
+test_whitelist_requires_github_repo_path
 test_hooks_block_midnight_window
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
