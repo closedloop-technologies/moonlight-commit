@@ -139,6 +139,9 @@ github_org_from_origin() {
     git@github.com:*)
       repo_path=${origin_lower#*:}
       ;;
+    ssh://git@github.com:22/*)
+      repo_path=${origin_lower#ssh://git@github.com:22/}
+      ;;
     ssh://git@github.com/*)
       repo_path=${origin_lower#ssh://git@*/}
       ;;
