@@ -718,6 +718,27 @@ test_commit_msg_rejects_message_directory() {
   echo "✅"
 }
 
+test_commit_msg_rejects_symlinked_message_files() {
+  echo -n "→ Testing commit-msg rejects symlinked message files ... "
+  rm -rf /tmp/repo /tmp/moonlight-real-message /tmp/moonlight-linked-message
+  mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  echo "[override]" > /tmp/moonlight-real-message
+  ln -s /tmp/moonlight-real-message /tmp/moonlight-linked-message
+
+  if /usr/src/app/hooks/commit-msg /tmp/moonlight-linked-message \
+    >/tmp/moonlight-commit-msg-symlink.log 2>&1; then
+    echo "❌"
+    echo "commit-msg should reject symlinked message files"; exit 1
+  fi
+
+  grep -q "commit-msg file must not be a symlink: /tmp/moonlight-linked-message" \
+    /tmp/moonlight-commit-msg-symlink.log
+
+  echo "✅"
+}
+
 test_commit_msg_rejects_extra_args() {
   echo -n "→ Testing commit-msg rejects extra arguments ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -899,6 +920,7 @@ test_pre_commit_rejects_extra_args
 test_commit_msg_rejects_missing_args
 test_commit_msg_rejects_missing_message_file
 test_commit_msg_rejects_message_directory
+test_commit_msg_rejects_symlinked_message_files
 test_commit_msg_rejects_extra_args
 test_commit_msg_handles_dash_prefixed_message_files
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir

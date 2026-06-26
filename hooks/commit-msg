@@ -14,6 +14,10 @@ if [ ! -f "$1" ]; then
   echo "commit-msg file must exist: $1" >&2
   exit 2
 fi
+if [ -L "$1" ]; then
+  echo "commit-msg file must not be a symlink: $1" >&2
+  exit 2
+fi
 
 # Load configuration with defaults. Environment variables override git config.
 BLOCK_START="${MOONLIGHT_BLOCK_START:-$(git config --get moonlight-commit.blockStart 2>/dev/null)}"
