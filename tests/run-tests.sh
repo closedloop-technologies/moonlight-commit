@@ -472,6 +472,16 @@ test_hooks_block_overnight_window() {
   git reset -q --hard HEAD
   grep -q "Commit message 'early commit' blocked between 22:00 and 6:00" /tmp/moonlight-overnight-early.log
 
+  git checkout -q -b feature/overnight-saturday-early
+  echo "saturday early" >> README.md
+  git add README.md
+  if MOONLIGHT_BLOCK_START=22 MOONLIGHT_BLOCK_END=6 faketime -f "2025-05-03 02:15:00" git commit -q -m "saturday early commit" >/tmp/moonlight-overnight-saturday-early.log 2>&1; then
+    echo "❌"
+    echo "Saturday early overnight block window should have failed because Friday is blocked"; exit 1
+  fi
+  git reset -q --hard HEAD
+  grep -q "Commit message 'saturday early commit' blocked between 22:00 and 6:00" /tmp/moonlight-overnight-saturday-early.log
+
   git checkout -q -b feature/overnight-midday
   echo "midday" >> README.md
   git add README.md
