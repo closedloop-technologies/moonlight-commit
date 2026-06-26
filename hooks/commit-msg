@@ -73,6 +73,7 @@ validate_config() {
   IFS=,
   for day in $BLOCK_DAYS; do
     IFS=$old_ifs
+    day=$(printf '%s' "$day" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     if ! is_integer "$day" || [ "$day" -lt 1 ] || [ "$day" -gt 7 ]; then
       echo "❌ moonlight-commit.blockDays must contain comma-separated integers from 1 to 7" >&2
       exit 1
