@@ -41,6 +41,27 @@ csv_contains() {
   return 1
 }
 
+lowercase() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+csv_contains_casefold() {
+  needle=$(lowercase "$1")
+  haystack="$2"
+  old_ifs=$IFS
+  IFS=,
+  for item in $haystack; do
+    IFS=$old_ifs
+    item=$(printf '%s' "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ "$(lowercase "$item")" = "$needle" ]; then
+      return 0
+    fi
+    IFS=,
+  done
+  IFS=$old_ifs
+  return 1
+}
+
 is_integer() {
   case "$1" in
     ""|*[!0-9]*)
@@ -202,7 +223,7 @@ echo "$BRANCH_NAME" | grep -qi "hotfix" && exit 0
 echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
 
 # Skip checks for whitelisted orgs
-if csv_contains "$REPO_ORG" "$WHITELIST_ORGS"; then
+if csv_contains_casefold "$REPO_ORG" "$WHITELIST_ORGS"; then
   exit 0
 fi
 
