@@ -62,7 +62,7 @@ install_hook() {
 
   cp "$source_file" "$target_file"
   chmod +x "$target_file"
-  if [ ! -e "$hooks_path/$hook_name" ]; then
+  if [ ! -e "$hooks_path/$hook_name" ] && [ ! -L "$hooks_path/$hook_name" ]; then
     (cd "$hooks_path" && ln -s "$hook_name.moonlight" "$hook_name")
   fi
 }
@@ -85,7 +85,7 @@ if [ "$dry_run" -eq 1 ]; then
   echo "Would create hooks directory: $hooks_path"
   for hook_name in pre-commit commit-msg; do
     echo "Would install: $hooks_path/$hook_name.moonlight"
-    if [ ! -e "$hooks_path/$hook_name" ]; then
+    if [ ! -e "$hooks_path/$hook_name" ] && [ ! -L "$hooks_path/$hook_name" ]; then
       echo "Would create symlink: $hooks_path/$hook_name -> $hook_name.moonlight"
     else
       echo "Hook already exists at $hooks_path/$hook_name"

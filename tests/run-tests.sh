@@ -130,6 +130,24 @@ test_installer_cleans_downloaded_hooks_from_custom_tmpdir() {
   echo "✅"
 }
 
+test_installer_preserves_existing_dangling_hook_symlinks() {
+  echo -n "→ Testing installer preserves existing dangling hook symlinks ... "
+  rm -rf /tmp/install-repo && mkdir -p /tmp/install-repo
+  cd /tmp/install-repo
+  git init -q
+  ln -s missing-pre-commit .git/hooks/pre-commit
+
+  /usr/src/app/install.sh >/tmp/moonlight-install-dangling-hook.log
+
+  test -x .git/hooks/pre-commit.moonlight
+  test -x .git/hooks/commit-msg.moonlight
+  test -L .git/hooks/pre-commit
+  test "$(readlink .git/hooks/pre-commit)" = "missing-pre-commit"
+  test -L .git/hooks/commit-msg
+
+  echo "✅"
+}
+
 test_rejects_invalid_block_window_config() {
   echo -n "→ Testing hooks reject invalid block window config ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -405,6 +423,7 @@ test_installer_rejects_unknown_args
 test_installer_rejects_extra_args
 test_installer_respects_relative_hooks_path_from_subdir
 test_installer_cleans_downloaded_hooks_from_custom_tmpdir
+test_installer_preserves_existing_dangling_hook_symlinks
 test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config
 test_hooks_reject_empty_day_entries
