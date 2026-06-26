@@ -69,6 +69,33 @@ is_valid_org_name() {
   return 0
 }
 
+github_org_from_origin() {
+  origin="$1"
+  case "$origin" in
+    git@github.com:*)
+      repo_path=${origin#git@github.com:}
+      ;;
+    ssh://git@github.com/*)
+      repo_path=${origin#ssh://git@github.com/}
+      ;;
+    https://github.com/*)
+      repo_path=${origin#https://github.com/}
+      ;;
+    http://github.com/*)
+      repo_path=${origin#http://github.com/}
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  org=${repo_path%%/*}
+  if is_valid_org_name "$org"; then
+    printf '%s\n' "$org"
+    return 0
+  fi
+  return 1
+}
+
 validate_config() {
   if ! is_integer "$BLOCK_START" || [ "$BLOCK_START" -lt 0 ] || [ "$BLOCK_START" -gt 23 ]; then
     echo "❌ moonlight-commit.blockStart must be an integer from 0 to 23" >&2
@@ -150,7 +177,7 @@ echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
 
 # 3. Org whitelist exception (parse origin URL)
 ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
-REPO_ORG=$(echo "$ORIGIN_URL" | sed -E 's#.*[:/]{1,2}([^/]+)/.*#\1#')
+REPO_ORG=$(github_org_from_origin "$ORIGIN_URL" || echo "")
 if csv_contains "$REPO_ORG" "$WHITELIST_ORGS"; then
   [ "$DRY_RUN" -eq 1 ] && echo "Org '$REPO_ORG' whitelisted" && exit 0
   exit 0

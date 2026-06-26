@@ -307,6 +307,32 @@ test_hooks_reject_invalid_whitelist_org_entries() {
   echo "✅"
 }
 
+test_whitelist_requires_github_origin() {
+  echo -n "→ Testing whitelist only applies to GitHub origins ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  git config moonlight-commit.whitelistOrgs "myorg"
+  echo "# non-github whitelist" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git remote add origin git@gitlab.com:myorg/repo.git
+  git checkout -q -b feature/non-github-origin
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 10:00:00" git commit -q -m "non github origin" \
+    >/tmp/moonlight-non-github-whitelist.log 2>&1; then
+    echo "❌"
+    echo "Non-GitHub origin should not match GitHub org whitelist"; exit 1
+  fi
+
+  grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-non-github-whitelist.log
+
+  echo "✅"
+}
+
 test_hooks_block_midnight_window() {
   echo -n "→ Testing hooks block midnight window ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -559,6 +585,7 @@ test_hooks_handle_padded_env_block_days
 test_hooks_handle_padded_git_config_block_days
 test_hooks_reject_empty_whitelist_org_entries
 test_hooks_reject_invalid_whitelist_org_entries
+test_whitelist_requires_github_origin
 test_hooks_block_midnight_window
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
