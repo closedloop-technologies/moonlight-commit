@@ -234,6 +234,29 @@ test_hooks_reject_empty_whitelist_org_entries() {
   echo "✅"
 }
 
+test_hooks_block_midnight_window() {
+  echo -n "→ Testing hooks block midnight window ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "# midnight block" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/midnight
+  echo "change" >> README.md
+  git add README.md
+
+  if MOONLIGHT_BLOCK_START=0 MOONLIGHT_BLOCK_END=1 faketime -f "2025-04-30 00:15:00" git commit -q -m "midnight commit" >/tmp/moonlight-midnight.log 2>&1; then
+    echo "❌"
+    echo "Midnight block window should have failed"; exit 1
+  fi
+
+  grep -q "Commit message 'midnight commit' blocked between 0:00 and 1:00" /tmp/moonlight-midnight.log
+
+  echo "✅"
+}
+
 test_pre_commit_rejects_unknown_args() {
   echo -n "→ Testing pre-commit rejects unknown arguments ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -460,6 +483,7 @@ test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config
 test_hooks_reject_empty_day_entries
 test_hooks_reject_empty_whitelist_org_entries
+test_hooks_block_midnight_window
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
 test_commit_msg_rejects_missing_args

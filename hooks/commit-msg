@@ -108,6 +108,7 @@ validate_config
 # Get current local hour and day of week
 CURRENT_HOUR=$(date +%H)
 CURRENT_HOUR=${CURRENT_HOUR#0}
+[ -z "$CURRENT_HOUR" ] && CURRENT_HOUR=0
 CURRENT_DAY=$(date +%u)
 
 # Get branch name and origin org

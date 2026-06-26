@@ -118,6 +118,7 @@ validate_config
 # Get current local hour (0-23) and day of week (1=Monday, 7=Sunday)
 CURRENT_HOUR=$(date +%H)
 CURRENT_HOUR=${CURRENT_HOUR#0}
+[ -z "$CURRENT_HOUR" ] && CURRENT_HOUR=0
 CURRENT_DAY=$(date +%u)
 
 # Get current branch name
