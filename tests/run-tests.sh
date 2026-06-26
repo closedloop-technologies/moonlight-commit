@@ -735,6 +735,24 @@ test_commit_msg_rejects_extra_args() {
   echo "✅"
 }
 
+test_commit_msg_handles_dash_prefixed_message_files() {
+  echo -n "→ Testing commit-msg handles dash-prefixed message files ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  echo "[override]" > -moonlight-message
+
+  if ! MOONLIGHT_BLOCK_START=0 MOONLIGHT_BLOCK_END=24 \
+    /usr/src/app/hooks/commit-msg -moonlight-message \
+    >/tmp/moonlight-commit-msg-dash-file.log 2>&1; then
+    echo "❌"
+    cat /tmp/moonlight-commit-msg-dash-file.log
+    echo "commit-msg should read dash-prefixed message paths as files"; exit 1
+  fi
+
+  echo "✅"
+}
+
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir() {
   echo -n "→ Testing pre-commit resolves relative hooksPath from subdirectory ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo/.githooks /tmp/repo/src
@@ -882,6 +900,7 @@ test_commit_msg_rejects_missing_args
 test_commit_msg_rejects_missing_message_file
 test_commit_msg_rejects_message_directory
 test_commit_msg_rejects_extra_args
+test_commit_msg_handles_dash_prefixed_message_files
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
 
 echo

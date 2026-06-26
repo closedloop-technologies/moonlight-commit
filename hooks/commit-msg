@@ -251,8 +251,8 @@ fi
 # If within blocked hours, enforce [override] keyword
 if is_blocked_hour "$CURRENT_HOUR" "$CURRENT_DAY"; then
   COMMIT_MSG_FILE="$1"
-  if ! grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
-    FIRST_LINE=$(head -n1 "$COMMIT_MSG_FILE")
+  if ! grep -q "\[override\]" -- "$COMMIT_MSG_FILE"; then
+    FIRST_LINE=$(head -n1 -- "$COMMIT_MSG_FILE")
     echo "❌ Commit message '$FIRST_LINE' blocked between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays without [override]." >&2
     exit 1
   fi

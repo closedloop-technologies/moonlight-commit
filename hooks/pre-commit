@@ -267,7 +267,7 @@ fi
 if is_blocked_hour "$CURRENT_HOUR" "$CURRENT_DAY"; then
   # Attempt override via commit message (pre-commit only sees COMMIT_EDITMSG if using -m)
   COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
-  if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
+  if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" -- "$COMMIT_MSG_FILE"; then
     [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
     exit 0
   fi
