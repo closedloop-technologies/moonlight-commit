@@ -284,6 +284,38 @@ test_commit_msg_rejects_missing_args() {
   echo "✅"
 }
 
+test_commit_msg_rejects_missing_message_file() {
+  echo -n "→ Testing commit-msg rejects missing message file path ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+
+  if /usr/src/app/hooks/commit-msg /tmp/moonlight-missing-message >/tmp/moonlight-commit-msg-missing-file.log 2>&1; then
+    echo "❌"
+    echo "commit-msg should reject missing message files"; exit 1
+  fi
+
+  grep -q "commit-msg file must exist: /tmp/moonlight-missing-message" /tmp/moonlight-commit-msg-missing-file.log
+
+  echo "✅"
+}
+
+test_commit_msg_rejects_message_directory() {
+  echo -n "→ Testing commit-msg rejects message directory paths ... "
+  rm -rf /tmp/repo /tmp/moonlight-message-dir && mkdir -p /tmp/repo /tmp/moonlight-message-dir
+  cd /tmp/repo
+  git init -q
+
+  if /usr/src/app/hooks/commit-msg /tmp/moonlight-message-dir >/tmp/moonlight-commit-msg-dir.log 2>&1; then
+    echo "❌"
+    echo "commit-msg should reject directory message paths"; exit 1
+  fi
+
+  grep -q "commit-msg file must exist: /tmp/moonlight-message-dir" /tmp/moonlight-commit-msg-dir.log
+
+  echo "✅"
+}
+
 test_commit_msg_rejects_extra_args() {
   echo -n "→ Testing commit-msg rejects extra arguments ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -431,6 +463,8 @@ test_hooks_reject_empty_whitelist_org_entries
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
 test_commit_msg_rejects_missing_args
+test_commit_msg_rejects_missing_message_file
+test_commit_msg_rejects_message_directory
 test_commit_msg_rejects_extra_args
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
 
