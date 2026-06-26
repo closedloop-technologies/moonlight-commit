@@ -53,7 +53,10 @@ export MOONLIGHT_WHITELIST_ORGS="your-org,another-org"
 
 ## Branch Exceptions
 
-Branches containing `hotfix` or `vacation` bypass blocking.
+Branches named `hotfix` or `vacation`, or branches with `hotfix` or
+`vacation` as a path segment such as `hotfix/urgent` or
+`release/vacation/plans`, bypass blocking. Substrings such as
+`feature/not-hotfix` or `release/vacationland` do not bypass blocking.
 
 Use `[override]` in commit messages to force a commit during the block window.
 

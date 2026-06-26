@@ -547,6 +547,20 @@ test_hooks_require_explicit_bypass_branch_segments() {
   grep -q "Commit message 'not really hotfix' blocked between 9:00 and 17:00" \
     /tmp/moonlight-not-hotfix.log
 
+  git reset -q --hard HEAD
+  git checkout -q -b release/vacationland
+  echo "vacationland" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 11:00:00" git commit -q -m "not really vacation" \
+    >/tmp/moonlight-not-vacation.log 2>&1; then
+    echo "❌"
+    echo "Branch containing vacation as a substring should not bypass"; exit 1
+  fi
+
+  grep -q "Commit message 'not really vacation' blocked between 9:00 and 17:00" \
+    /tmp/moonlight-not-vacation.log
+
   echo "✅"
 }
 
