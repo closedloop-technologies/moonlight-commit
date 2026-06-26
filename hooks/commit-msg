@@ -106,7 +106,7 @@ is_valid_org_name() {
 is_valid_repo_name() {
   [ "${#1}" -le 100 ] || return 1
   case "$1" in
-    ""|"."|".."|*/*|*\\*|*[!A-Za-z0-9._-]*)
+    ""|"."|".."|*/*|*\\*|*.|*[!A-Za-z0-9._-]*)
       return 1
       ;;
   esac
