@@ -163,6 +163,11 @@ github_org_from_origin() {
       ;;
   esac
   case "$repo_path" in
+    *\?*|*#*)
+      return 1
+      ;;
+  esac
+  case "$repo_path" in
     */*)
       ;;
     *)
