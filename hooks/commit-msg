@@ -62,6 +62,24 @@ csv_contains_casefold() {
   return 1
 }
 
+branch_has_bypass_label() {
+  branch=$(lowercase "$1")
+  old_ifs=$IFS
+  IFS=/
+  for segment in $branch; do
+    IFS=$old_ifs
+    case "$segment" in
+      hotfix|vacation)
+        IFS=$old_ifs
+        return 0
+        ;;
+    esac
+    IFS=/
+  done
+  IFS=$old_ifs
+  return 1
+}
+
 is_integer() {
   case "$1" in
     ""|*[!0-9]*)
@@ -218,9 +236,8 @@ BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 ORIGIN_URL=$(git remote get-url origin 2>/dev/null || echo "")
 REPO_ORG=$(github_org_from_origin "$ORIGIN_URL" || echo "")
 
-# Skip checks for hotfix or vacation branches
-echo "$BRANCH_NAME" | grep -qi "hotfix" && exit 0
-echo "$BRANCH_NAME" | grep -qi "vacation" && exit 0
+# Skip checks for explicit hotfix or vacation branch segments
+branch_has_bypass_label "$BRANCH_NAME" && exit 0
 
 # Skip checks for whitelisted orgs
 if csv_contains_casefold "$REPO_ORG" "$WHITELIST_ORGS"; then

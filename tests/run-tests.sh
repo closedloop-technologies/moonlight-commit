@@ -517,6 +517,39 @@ test_hooks_block_overnight_window() {
   echo "✅"
 }
 
+test_hooks_require_explicit_bypass_branch_segments() {
+  echo -n "→ Testing bypass branches require explicit labels ... "
+
+  if test_commit "2025-04-30 11:00:00" "fix bug" "hotfix"; then
+    :
+  else
+    echo "❌"
+    echo "Exact hotfix branch should pass"; exit 1
+  fi
+
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "# not hotfix" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/not-hotfix
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 11:00:00" git commit -q -m "not really hotfix" \
+    >/tmp/moonlight-not-hotfix.log 2>&1; then
+    echo "❌"
+    echo "Branch containing hotfix as a substring should not bypass"; exit 1
+  fi
+
+  grep -q "Commit message 'not really hotfix' blocked between 9:00 and 17:00" \
+    /tmp/moonlight-not-hotfix.log
+
+  echo "✅"
+}
+
 test_pre_commit_rejects_unknown_args() {
   echo -n "→ Testing pre-commit rejects unknown arguments ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -753,6 +786,7 @@ test_whitelist_matches_github_org_case_insensitively
 test_whitelist_rejects_overlong_github_repo_names
 test_hooks_block_midnight_window
 test_hooks_block_overnight_window
+test_hooks_require_explicit_bypass_branch_segments
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
 test_commit_msg_rejects_missing_args
