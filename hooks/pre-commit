@@ -144,15 +144,16 @@ is_blocked_hour() {
 
 github_org_from_origin() {
   origin="$1"
-  case "$origin" in
+  origin_lower=$(lowercase "$origin")
+  case "$origin_lower" in
     git@github.com:*)
-      repo_path=${origin#git@github.com:}
+      repo_path=${origin#*:}
       ;;
     ssh://git@github.com/*)
-      repo_path=${origin#ssh://git@github.com/}
+      repo_path=${origin#ssh://git@*/}
       ;;
     https://github.com/*)
-      repo_path=${origin#https://github.com/}
+      repo_path=${origin#https://*/}
       ;;
     *)
       return 1
