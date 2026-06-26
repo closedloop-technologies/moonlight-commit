@@ -168,6 +168,13 @@ test_rejects_invalid_block_window_config() {
 
   grep -q "moonlight-commit.blockStart must be an integer from 0 to 23" /tmp/moonlight-invalid-config.log
 
+  if MOONLIGHT_BLOCK_START=10 MOONLIGHT_BLOCK_END=10 faketime -f "2025-04-30 10:15:00" git commit -q -m "equal config" >/tmp/moonlight-equal-config.log 2>&1; then
+    echo "❌"
+    echo "Equal blockStart and blockEnd should have failed"; exit 1
+  fi
+
+  grep -q "moonlight-commit.blockStart must not equal blockEnd" /tmp/moonlight-equal-config.log
+
   echo "✅"
 }
 
@@ -435,6 +442,47 @@ test_hooks_block_midnight_window() {
   echo "✅"
 }
 
+test_hooks_block_overnight_window() {
+  echo -n "→ Testing hooks block overnight windows ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "# overnight block" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+
+  git checkout -q -b feature/overnight-late
+  echo "late" >> README.md
+  git add README.md
+  if MOONLIGHT_BLOCK_START=22 MOONLIGHT_BLOCK_END=6 faketime -f "2025-04-30 23:15:00" git commit -q -m "late commit" >/tmp/moonlight-overnight-late.log 2>&1; then
+    echo "❌"
+    echo "Late overnight block window should have failed"; exit 1
+  fi
+  git reset -q --hard HEAD
+  grep -q "Commit message 'late commit' blocked between 22:00 and 6:00" /tmp/moonlight-overnight-late.log
+
+  git checkout -q -b feature/overnight-early
+  echo "early" >> README.md
+  git add README.md
+  if MOONLIGHT_BLOCK_START=22 MOONLIGHT_BLOCK_END=6 faketime -f "2025-05-01 02:15:00" git commit -q -m "early commit" >/tmp/moonlight-overnight-early.log 2>&1; then
+    echo "❌"
+    echo "Early overnight block window should have failed"; exit 1
+  fi
+  git reset -q --hard HEAD
+  grep -q "Commit message 'early commit' blocked between 22:00 and 6:00" /tmp/moonlight-overnight-early.log
+
+  git checkout -q -b feature/overnight-midday
+  echo "midday" >> README.md
+  git add README.md
+  if ! MOONLIGHT_BLOCK_START=22 MOONLIGHT_BLOCK_END=6 faketime -f "2025-04-30 12:15:00" git commit -q -m "midday commit" >/tmp/moonlight-overnight-midday.log 2>&1; then
+    echo "❌"
+    echo "Midday outside overnight block window should have been allowed"; exit 1
+  fi
+
+  echo "✅"
+}
+
 test_pre_commit_rejects_unknown_args() {
   echo -n "→ Testing pre-commit rejects unknown arguments ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -669,6 +717,7 @@ test_whitelist_rejects_plain_http_github_origin
 test_whitelist_requires_github_repo_path
 test_whitelist_rejects_overlong_github_repo_names
 test_hooks_block_midnight_window
+test_hooks_block_overnight_window
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
 test_commit_msg_rejects_missing_args

@@ -70,6 +70,29 @@ is_valid_repo_name() {
   return 0
 }
 
+is_blocked_hour() {
+  current_hour="$1"
+  current_day="$2"
+
+  if [ "$BLOCK_START" -lt "$BLOCK_END" ]; then
+    csv_contains "$current_day" "$BLOCK_DAYS" || return 1
+    [ "$current_hour" -ge "$BLOCK_START" ] && [ "$current_hour" -lt "$BLOCK_END" ]
+    return $?
+  fi
+
+  previous_day=$((current_day - 1))
+  [ "$previous_day" -eq 0 ] && previous_day=7
+  if [ "$current_hour" -ge "$BLOCK_START" ]; then
+    csv_contains "$current_day" "$BLOCK_DAYS"
+    return $?
+  fi
+  if [ "$current_hour" -lt "$BLOCK_END" ]; then
+    csv_contains "$previous_day" "$BLOCK_DAYS"
+    return $?
+  fi
+  return 1
+}
+
 github_org_from_origin() {
   origin="$1"
   case "$origin" in
@@ -112,8 +135,8 @@ validate_config() {
     echo "❌ moonlight-commit.blockEnd must be an integer from 1 to 24" >&2
     exit 1
   fi
-  if [ "$BLOCK_START" -ge "$BLOCK_END" ]; then
-    echo "❌ moonlight-commit.blockStart must be before blockEnd" >&2
+  if [ "$BLOCK_START" -eq "$BLOCK_END" ]; then
+    echo "❌ moonlight-commit.blockStart must not equal blockEnd" >&2
     exit 1
   fi
   case "$BLOCK_DAYS" in
@@ -183,22 +206,13 @@ if csv_contains "$REPO_ORG" "$WHITELIST_ORGS"; then
   exit 0
 fi
 
-# Check if current day is in block days
-if csv_contains "$CURRENT_DAY" "$BLOCK_DAYS"; then
-  DAY_ALLOWED=1
-else
-  DAY_ALLOWED=0
-fi
-
-if [ "$DAY_ALLOWED" -eq 1 ]; then
-  # If within blocked hours, enforce [override] keyword
-  if [ "$CURRENT_HOUR" -ge "$BLOCK_START" ] && [ "$CURRENT_HOUR" -lt "$BLOCK_END" ]; then
-    COMMIT_MSG_FILE="$1"
-    if ! grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
-      FIRST_LINE=$(head -n1 "$COMMIT_MSG_FILE")
-      echo "❌ Commit message '$FIRST_LINE' blocked between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays without [override]." >&2
-      exit 1
-    fi
+# If within blocked hours, enforce [override] keyword
+if is_blocked_hour "$CURRENT_HOUR" "$CURRENT_DAY"; then
+  COMMIT_MSG_FILE="$1"
+  if ! grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
+    FIRST_LINE=$(head -n1 "$COMMIT_MSG_FILE")
+    echo "❌ Commit message '$FIRST_LINE' blocked between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays without [override]." >&2
+    exit 1
   fi
 fi
 

@@ -35,6 +35,9 @@ Customize timings, days, and org whitelist via git config or environment vars:
 # Set block hours (inclusive start, exclusive end)
 git config moonlight-commit.blockStart 10
 git config moonlight-commit.blockEnd 16
+# Overnight windows are supported; 22 -> 6 blocks 10pm through 6am
+git config moonlight-commit.blockStart 22
+git config moonlight-commit.blockEnd 6
 # Or use environment variables
 export MOONLIGHT_BLOCK_START=10
 export MOONLIGHT_BLOCK_END=16

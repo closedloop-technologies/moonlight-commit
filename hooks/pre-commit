@@ -80,6 +80,29 @@ is_valid_repo_name() {
   return 0
 }
 
+is_blocked_hour() {
+  current_hour="$1"
+  current_day="$2"
+
+  if [ "$BLOCK_START" -lt "$BLOCK_END" ]; then
+    csv_contains "$current_day" "$BLOCK_DAYS" || return 1
+    [ "$current_hour" -ge "$BLOCK_START" ] && [ "$current_hour" -lt "$BLOCK_END" ]
+    return $?
+  fi
+
+  previous_day=$((current_day - 1))
+  [ "$previous_day" -eq 0 ] && previous_day=7
+  if [ "$current_hour" -ge "$BLOCK_START" ]; then
+    csv_contains "$current_day" "$BLOCK_DAYS"
+    return $?
+  fi
+  if [ "$current_hour" -lt "$BLOCK_END" ]; then
+    csv_contains "$previous_day" "$BLOCK_DAYS"
+    return $?
+  fi
+  return 1
+}
+
 github_org_from_origin() {
   origin="$1"
   case "$origin" in
@@ -122,8 +145,8 @@ validate_config() {
     echo "❌ moonlight-commit.blockEnd must be an integer from 1 to 24" >&2
     exit 1
   fi
-  if [ "$BLOCK_START" -ge "$BLOCK_END" ]; then
-    echo "❌ moonlight-commit.blockStart must be before blockEnd" >&2
+  if [ "$BLOCK_START" -eq "$BLOCK_END" ]; then
+    echo "❌ moonlight-commit.blockStart must not equal blockEnd" >&2
     exit 1
   fi
   case "$BLOCK_DAYS" in
@@ -200,38 +223,29 @@ if csv_contains "$REPO_ORG" "$WHITELIST_ORGS"; then
   exit 0
 fi
 
-# 4. Check if current day is in block days
-if csv_contains "$CURRENT_DAY" "$BLOCK_DAYS"; then
-  DAY_ALLOWED=1
-else
-  DAY_ALLOWED=0
-fi
-
-if [ "$DAY_ALLOWED" -eq 1 ]; then
-  # 5. Time window check: block if CURRENT_HOUR in [BLOCK_START, BLOCK_END)
-  if [ "$CURRENT_HOUR" -ge "$BLOCK_START" ] && [ "$CURRENT_HOUR" -lt "$BLOCK_END" ]; then
-    # Attempt override via commit message (pre-commit only sees COMMIT_EDITMSG if using -m)
-    COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
-    if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
-      [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
-      exit 0
-    fi
-    HOOKS_PATH=$(git rev-parse --path-format=absolute --git-path hooks 2>/dev/null || true)
-    [ -z "$HOOKS_PATH" ] && HOOKS_PATH=$(git rev-parse --git-path hooks)
-    if [ -x "$HOOKS_PATH/commit-msg" ]; then
-      [ "$DRY_RUN" -eq 1 ] && echo "Blocked-window decision deferred to commit-msg hook" && exit 0
-      exit 0
-    fi
-    MSG="Commit blocked: between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays"
-    if [ "$DRY_RUN" -eq 1 ]; then
-      echo "❌ $MSG" >&2
-      echo "Use [override] or adjust config" >&2
-      exit 0
-    else
-      echo "❌ $MSG" >&2
-      echo "   Use [override], adjust timings with 'git config moonlight-commit.blockStart/blockEnd/blockDays', or whitelist your org." >&2
-      exit 1
-    fi
+# 4. Time window check.
+if is_blocked_hour "$CURRENT_HOUR" "$CURRENT_DAY"; then
+  # Attempt override via commit message (pre-commit only sees COMMIT_EDITMSG if using -m)
+  COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
+  if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" "$COMMIT_MSG_FILE"; then
+    [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
+    exit 0
+  fi
+  HOOKS_PATH=$(git rev-parse --path-format=absolute --git-path hooks 2>/dev/null || true)
+  [ -z "$HOOKS_PATH" ] && HOOKS_PATH=$(git rev-parse --git-path hooks)
+  if [ -x "$HOOKS_PATH/commit-msg" ]; then
+    [ "$DRY_RUN" -eq 1 ] && echo "Blocked-window decision deferred to commit-msg hook" && exit 0
+    exit 0
+  fi
+  MSG="Commit blocked: between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "❌ $MSG" >&2
+    echo "Use [override] or adjust config" >&2
+    exit 0
+  else
+    echo "❌ $MSG" >&2
+    echo "   Use [override], adjust timings with 'git config moonlight-commit.blockStart/blockEnd/blockDays', or whitelist your org." >&2
+    exit 1
   fi
 fi
 
