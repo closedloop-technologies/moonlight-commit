@@ -561,6 +561,33 @@ test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir() {
   echo "✅"
 }
 
+test_pre_commit_ignores_stale_override_without_commit_msg_hook() {
+  echo -n "→ Testing pre-commit ignores stale override without commit-msg hook ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo/.githooks
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath .githooks
+  cp /usr/src/app/hooks/pre-commit .githooks/pre-commit
+  chmod +x .githooks/pre-commit
+  echo "# stale override" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/stale-override
+  printf 'previous commit [override]\n' > "$(git rev-parse --git-path COMMIT_EDITMSG)"
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 10:15:00" git commit -q -m "new commit without override" \
+    >/tmp/moonlight-stale-override.log 2>&1; then
+    echo "❌"
+    echo "pre-commit should ignore stale COMMIT_EDITMSG override text"; exit 1
+  fi
+
+  grep -q "Commit blocked: between 9:00 and 17:00" /tmp/moonlight-stale-override.log
+
+  echo "✅"
+}
+
 test_page_assets() {
   echo -n "→ Testing landing page local asset references ... "
   cd /usr/src/app
@@ -676,6 +703,7 @@ test_commit_msg_rejects_missing_message_file
 test_commit_msg_rejects_message_directory
 test_commit_msg_rejects_extra_args
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
+test_pre_commit_ignores_stale_override_without_commit_msg_hook
 
 echo
 echo "🎉 All tests passed!"
