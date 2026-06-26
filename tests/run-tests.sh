@@ -537,6 +537,32 @@ test_whitelist_rejects_overlong_github_repo_names() {
   echo "✅"
 }
 
+test_whitelist_rejects_doubled_git_suffix_origins() {
+  echo -n "→ Testing whitelist rejects doubled .git origin suffixes ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  git config moonlight-commit.whitelistOrgs "myorg"
+  echo "# doubled git suffix" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git remote add origin git@github.com:myorg/repo.git.git
+  git checkout -q -b feature/doubled-git-suffix
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 10:00:00" git commit -q -m "doubled git suffix" \
+    >/tmp/moonlight-doubled-git-suffix.log 2>&1; then
+    echo "❌"
+    echo "GitHub origin with doubled .git suffix should not match org whitelist"; exit 1
+  fi
+
+  grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-doubled-git-suffix.log
+
+  echo "✅"
+}
+
 test_hooks_block_midnight_window() {
   echo -n "→ Testing hooks block midnight window ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -957,6 +983,7 @@ test_whitelist_matches_github_host_case_insensitively
 test_whitelist_matches_github_ssh_scheme_case_insensitively
 test_whitelist_matches_github_ssh_port_22_origin
 test_whitelist_rejects_overlong_github_repo_names
+test_whitelist_rejects_doubled_git_suffix_origins
 test_hooks_block_midnight_window
 test_hooks_block_overnight_window
 test_hooks_require_explicit_bypass_branch_segments
