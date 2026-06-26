@@ -50,6 +50,15 @@ is_integer() {
   return 0
 }
 
+is_valid_org_name() {
+  case "$1" in
+    ""|-*|*-|*[!A-Za-z0-9-]*)
+      return 1
+      ;;
+  esac
+  return 0
+}
+
 validate_config() {
   if ! is_integer "$BLOCK_START" || [ "$BLOCK_START" -lt 0 ] || [ "$BLOCK_START" -gt 23 ]; then
     echo "❌ moonlight-commit.blockStart must be an integer from 0 to 23" >&2
@@ -96,6 +105,10 @@ validate_config() {
       org=$(printf '%s' "$org" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
       if [ -z "$org" ]; then
         echo "❌ moonlight-commit.whitelistOrgs must not contain empty entries" >&2
+        exit 1
+      fi
+      if ! is_valid_org_name "$org"; then
+        echo "❌ moonlight-commit.whitelistOrgs entries must be GitHub org names" >&2
         exit 1
       fi
       IFS=,

@@ -281,6 +281,32 @@ test_hooks_reject_empty_whitelist_org_entries() {
   echo "✅"
 }
 
+test_hooks_reject_invalid_whitelist_org_entries() {
+  echo -n "→ Testing hooks reject invalid whitelist org entries ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "# invalid whitelist entries" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git checkout -q -b feature/invalid-whitelist
+  echo "change" >> README.md
+  git add README.md
+
+  if MOONLIGHT_WHITELIST_ORGS='myorg,../other' \
+    faketime -f "2025-04-30 10:15:00" git commit -q -m "invalid whitelist config" \
+    >/tmp/moonlight-invalid-whitelist.log 2>&1; then
+    echo "❌"
+    echo "Invalid whitelist org entries should have failed"; exit 1
+  fi
+
+  grep -q "moonlight-commit.whitelistOrgs entries must be GitHub org names" \
+    /tmp/moonlight-invalid-whitelist.log
+
+  echo "✅"
+}
+
 test_hooks_block_midnight_window() {
   echo -n "→ Testing hooks block midnight window ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -532,6 +558,7 @@ test_hooks_reject_empty_day_entries
 test_hooks_handle_padded_env_block_days
 test_hooks_handle_padded_git_config_block_days
 test_hooks_reject_empty_whitelist_org_entries
+test_hooks_reject_invalid_whitelist_org_entries
 test_hooks_block_midnight_window
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
