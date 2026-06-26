@@ -211,49 +211,49 @@ test_hooks_reject_empty_day_entries() {
   echo "✅"
 }
 
-test_hooks_accept_padded_block_day_entries() {
-  echo -n "→ Testing hooks accept padded block day entries ... "
+assert_padded_block_days_still_block() {
+  local log_path="$1"
+  local message="$2"
+  shift 2
+
   rm -rf /tmp/repo && mkdir -p /tmp/repo
   cd /tmp/repo
   git init -q
   git config core.hooksPath /usr/src/app/hooks
-  echo "# padded day entries" > README.md
+  "$@"
+  echo "# padded block day entries" > README.md
   git add README.md
   git commit --no-verify -q -m "init"
   git checkout -q -b feature/padded-days
   echo "change" >> README.md
   git add README.md
 
-  if MOONLIGHT_BLOCK_DAYS='1, 2, 3,4,5 ' faketime -f "2025-04-30 10:15:00" git commit -q -m "padded day config" >/tmp/moonlight-padded-days.log 2>&1; then
+  if faketime -f "2025-04-30 10:15:00" git commit -q -m "$message" >"$log_path" 2>&1; then
     echo "❌"
     echo "Padded blockDays entries should still block Wednesday commits"; exit 1
   fi
 
-  grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-padded-days.log
+  grep -q "blocked between 9:00 and 17:00" "$log_path"
+}
+
+test_hooks_handle_padded_env_block_days() {
+  echo -n "→ Testing hooks handle padded env block day entries ... "
+
+  MOONLIGHT_BLOCK_DAYS='1, 2, 3,4,5 ' assert_padded_block_days_still_block \
+    /tmp/moonlight-padded-days.log \
+    "padded env day config" \
+    true
 
   echo "✅"
 }
 
-test_hooks_accept_padded_git_config_block_days() {
-  echo -n "→ Testing hooks accept padded git config block day entries ... "
-  rm -rf /tmp/repo && mkdir -p /tmp/repo
-  cd /tmp/repo
-  git init -q
-  git config core.hooksPath /usr/src/app/hooks
-  git config moonlight-commit.blockDays '1, 2, 3,4,5 '
-  echo "# padded git config day entries" > README.md
-  git add README.md
-  git commit --no-verify -q -m "init"
-  git checkout -q -b feature/padded-config-days
-  echo "change" >> README.md
-  git add README.md
+test_hooks_handle_padded_git_config_block_days() {
+  echo -n "→ Testing hooks handle padded git config block day entries ... "
 
-  if faketime -f "2025-04-30 10:15:00" git commit -q -m "padded git day config" >/tmp/moonlight-padded-config-days.log 2>&1; then
-    echo "❌"
-    echo "Padded git config blockDays entries should still block Wednesday commits"; exit 1
-  fi
-
-  grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-padded-config-days.log
+  assert_padded_block_days_still_block \
+    /tmp/moonlight-padded-config-days.log \
+    "padded git day config" \
+    git config moonlight-commit.blockDays '1, 2, 3,4,5 '
 
   echo "✅"
 }
@@ -529,8 +529,8 @@ test_installer_preserves_existing_dangling_hook_symlinks
 test_rejects_invalid_block_window_config
 test_commit_msg_rejects_invalid_day_config
 test_hooks_reject_empty_day_entries
-test_hooks_accept_padded_block_day_entries
-test_hooks_accept_padded_git_config_block_days
+test_hooks_handle_padded_env_block_days
+test_hooks_handle_padded_git_config_block_days
 test_hooks_reject_empty_whitelist_org_entries
 test_hooks_block_midnight_window
 test_pre_commit_rejects_unknown_args
