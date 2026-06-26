@@ -265,16 +265,17 @@ fi
 
 # 4. Time window check.
 if is_blocked_hour "$CURRENT_HOUR" "$CURRENT_DAY"; then
-  # Attempt override via commit message (pre-commit only sees COMMIT_EDITMSG if using -m)
-  COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
-  if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" -- "$COMMIT_MSG_FILE"; then
-    [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
-    exit 0
-  fi
   HOOKS_PATH=$(git rev-parse --path-format=absolute --git-path hooks 2>/dev/null || true)
   [ -z "$HOOKS_PATH" ] && HOOKS_PATH=$(git rev-parse --git-path hooks)
   if [ -x "$HOOKS_PATH/commit-msg" ]; then
     [ "$DRY_RUN" -eq 1 ] && echo "Blocked-window decision deferred to commit-msg hook" && exit 0
+    exit 0
+  fi
+  # Standalone pre-commit installs can only inspect COMMIT_EDITMSG, which may be
+  # stale when a commit-msg hook is available. Defer first when possible.
+  COMMIT_MSG_FILE=$(git rev-parse --git-path COMMIT_EDITMSG)
+  if [ -f "$COMMIT_MSG_FILE" ] && grep -q "\[override\]" -- "$COMMIT_MSG_FILE"; then
+    [ "$DRY_RUN" -eq 1 ] && echo "Override detected via commit message" && exit 0
     exit 0
   fi
   MSG="Commit blocked: between ${BLOCK_START}:00 and ${BLOCK_END}:00 on weekdays"

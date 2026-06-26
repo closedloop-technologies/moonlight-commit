@@ -796,6 +796,28 @@ test_commit_msg_handles_dash_prefixed_message_files() {
   echo "✅"
 }
 
+test_pre_commit_defers_before_stale_commit_editmsg_override() {
+  echo -n "→ Testing pre-commit ignores stale override before commit-msg defer ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  echo "[override]" > "$(git rev-parse --git-path COMMIT_EDITMSG)"
+
+  MOONLIGHT_BLOCK_START=0 MOONLIGHT_BLOCK_END=24 \
+    /usr/src/app/hooks/pre-commit --dry-run \
+    >/tmp/moonlight-stale-commit-editmsg.log 2>&1
+
+  grep -q "Blocked-window decision deferred to commit-msg hook" \
+    /tmp/moonlight-stale-commit-editmsg.log
+  if grep -q "Override detected via commit message" /tmp/moonlight-stale-commit-editmsg.log; then
+    echo "❌"
+    echo "pre-commit should not trust a stale COMMIT_EDITMSG when commit-msg is installed"; exit 1
+  fi
+
+  echo "✅"
+}
+
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir() {
   echo -n "→ Testing pre-commit resolves relative hooksPath from subdirectory ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo/.githooks /tmp/repo/src
@@ -946,6 +968,7 @@ test_commit_msg_rejects_message_directory
 test_commit_msg_rejects_symlinked_message_files
 test_commit_msg_rejects_extra_args
 test_commit_msg_handles_dash_prefixed_message_files
+test_pre_commit_defers_before_stale_commit_editmsg_override
 test_pre_commit_defers_to_relative_hooks_path_commit_msg_from_subdir
 
 echo
