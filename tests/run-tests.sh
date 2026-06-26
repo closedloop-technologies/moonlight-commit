@@ -440,6 +440,30 @@ test_whitelist_matches_github_host_case_insensitively() {
   echo "✅"
 }
 
+test_whitelist_matches_github_ssh_scheme_case_insensitively() {
+  echo -n "→ Testing whitelist matches GitHub SSH scheme case-insensitively ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  git config moonlight-commit.whitelistOrgs "myorg"
+  echo "# mixed-case github ssh scheme" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git remote add origin SSH://git@GitHub.com/MyOrg/repo.git
+  git checkout -q -b feature/mixed-case-github-ssh-scheme
+  echo "change" >> README.md
+  git add README.md
+
+  if ! faketime -f "2025-04-30 10:00:00" git commit -q -m "mixed case github ssh scheme" \
+    >/tmp/moonlight-mixed-case-github-ssh-scheme.log 2>&1; then
+    echo "❌"
+    echo "Mixed-case GitHub SSH scheme should match whitelist"; exit 1
+  fi
+
+  echo "✅"
+}
+
 test_whitelist_rejects_overlong_github_repo_names() {
   echo -n "→ Testing whitelist rejects overlong GitHub repo names ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -822,6 +846,7 @@ test_whitelist_rejects_plain_http_github_origin
 test_whitelist_requires_github_repo_path
 test_whitelist_matches_github_org_case_insensitively
 test_whitelist_matches_github_host_case_insensitively
+test_whitelist_matches_github_ssh_scheme_case_insensitively
 test_whitelist_rejects_overlong_github_repo_names
 test_hooks_block_midnight_window
 test_hooks_block_overnight_window

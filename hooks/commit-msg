@@ -137,13 +137,13 @@ github_org_from_origin() {
   origin_lower=$(lowercase "$origin")
   case "$origin_lower" in
     git@github.com:*)
-      repo_path=${origin#*:}
+      repo_path=${origin_lower#*:}
       ;;
     ssh://git@github.com/*)
-      repo_path=${origin#ssh://git@*/}
+      repo_path=${origin_lower#ssh://git@*/}
       ;;
     https://github.com/*)
-      repo_path=${origin#https://*/}
+      repo_path=${origin_lower#https://*/}
       ;;
     *)
       return 1
