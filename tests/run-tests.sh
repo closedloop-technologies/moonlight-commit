@@ -412,6 +412,32 @@ test_whitelist_rejects_overlong_github_repo_names() {
   echo "✅"
 }
 
+test_whitelist_rejects_repeated_git_suffix_origins() {
+  echo -n "→ Testing whitelist rejects repeated .git suffix origins ... "
+  rm -rf /tmp/repo && mkdir -p /tmp/repo
+  cd /tmp/repo
+  git init -q
+  git config core.hooksPath /usr/src/app/hooks
+  git config moonlight-commit.whitelistOrgs "myorg"
+  echo "# repeated git suffix" > README.md
+  git add README.md
+  git commit --no-verify -q -m "init"
+  git remote add origin git@github.com:myorg/repo.git.git
+  git checkout -q -b feature/repeated-git-suffix
+  echo "change" >> README.md
+  git add README.md
+
+  if faketime -f "2025-04-30 10:00:00" git commit -q -m "repeated git suffix" \
+    >/tmp/moonlight-repeated-git-suffix.log 2>&1; then
+    echo "❌"
+    echo "GitHub origin with repeated .git suffix should not match org whitelist"; exit 1
+  fi
+
+  grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-repeated-git-suffix.log
+
+  echo "✅"
+}
+
 test_hooks_block_midnight_window() {
   echo -n "→ Testing hooks block midnight window ... "
   rm -rf /tmp/repo && mkdir -p /tmp/repo
@@ -695,6 +721,7 @@ test_whitelist_requires_github_origin
 test_whitelist_rejects_plain_http_github_origin
 test_whitelist_requires_github_repo_path
 test_whitelist_rejects_overlong_github_repo_names
+test_whitelist_rejects_repeated_git_suffix_origins
 test_hooks_block_midnight_window
 test_pre_commit_rejects_unknown_args
 test_pre_commit_rejects_extra_args
