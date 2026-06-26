@@ -589,6 +589,35 @@ test_whitelist_rejects_trailing_dot_github_repo_names() {
   echo "✅"
 }
 
+test_whitelist_rejects_hidden_or_flag_like_github_repo_names() {
+  echo -n "→ Testing whitelist rejects hidden or flag-like GitHub repo names ... "
+
+  for repo in .repo -repo; do
+    rm -rf /tmp/repo && mkdir -p /tmp/repo
+    cd /tmp/repo
+    git init -q
+    git config core.hooksPath /usr/src/app/hooks
+    git config moonlight-commit.whitelistOrgs "myorg"
+    echo "# hidden github repo" > README.md
+    git add README.md
+    git commit --no-verify -q -m "init"
+    git remote add origin "git@github.com:myorg/${repo}.git"
+    git checkout -q -b "feature/reject-${repo#.}"
+    echo "change" >> README.md
+    git add README.md
+
+    if faketime -f "2025-04-30 10:00:00" git commit -q -m "hidden or flag-like github repo" \
+      >/tmp/moonlight-hidden-flag-repo.log 2>&1; then
+      echo "❌"
+      echo "GitHub origin with hidden or flag-like repo name should not match org whitelist"; exit 1
+    fi
+
+    grep -q "blocked between 9:00 and 17:00" /tmp/moonlight-hidden-flag-repo.log
+  done
+
+  echo "✅"
+}
+
 test_whitelist_rejects_query_and_fragment_github_origins() {
   echo -n "→ Testing whitelist rejects query and fragment GitHub origins ... "
 
@@ -1040,6 +1069,7 @@ test_whitelist_matches_github_ssh_port_22_origin
 test_whitelist_rejects_overlong_github_repo_names
 test_whitelist_rejects_doubled_git_suffix_origins
 test_whitelist_rejects_trailing_dot_github_repo_names
+test_whitelist_rejects_hidden_or_flag_like_github_repo_names
 test_whitelist_rejects_query_and_fragment_github_origins
 test_hooks_block_midnight_window
 test_hooks_block_overnight_window
